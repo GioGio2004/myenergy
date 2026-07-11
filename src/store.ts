@@ -71,6 +71,9 @@ export const useStore = create<Store>((set, get) => ({
 
   async boot() {
     const q = urlParams()
+    if (new URLSearchParams(window.location.search).get('big') === '1') {
+      document.documentElement.classList.add('big') // demo laptop font bump (docs/03 §10)
+    }
     if (q.act === '2' || q.act === '3') {
       // Judge mode: deterministic prepared midgame (docs/03 §10)
       const seed = q.seed ? (/^\d+$/.test(q.seed) ? Number(q.seed) >>> 0 : seedFromString(q.seed)) : JUDGE_SEED

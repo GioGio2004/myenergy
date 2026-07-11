@@ -169,6 +169,9 @@ const S = {
 
   factLabel: { ka: 'ფაქტი', en: 'Fact' },
   soundLabel: { ka: 'ხმა', en: 'Sound' },
+  nicknameLabel: { ka: 'შენი სახელი', en: 'Your name' },
+  submitScore: { ka: 'ქულის შენახვა', en: 'Save score' },
+  scoreSaved: { ka: 'ქულა შენახულია!', en: 'Score saved!' },
 
   // ---------- Act II/III UI (M5) ----------
   expandBanner: { ka: 'დაამატე მეორე რეგიონი', en: 'Add a second region' },

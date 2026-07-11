@@ -14,5 +14,15 @@
 - 2026-07-11 M1 · HPP_RUSH_PROTEST_CHANCE 0.60→0.65 (sim needs ≥55% observed; 0.60 was flaky), GASSPIKE_FUEL_MULT 1.5→1.8, GIG_PAYOUT 3500→4500, DEMAND_GROWTH 4%→3%(+1%/prosperity). All tuned via sim per docs/02 §7 "fail → tune this file".
 - 2026-07-11 M1 · Act I win counts your peaker toward coverage (dependence + spike events still punish it); Act II self-cover uses own-region generation only; translink transfers lose 8%.
 
+- 2026-07-12 M2 · Rejection numbers: UI appends have/need (`… · 62/75`) to the generic engine rejection keys — engine keys stay simple, dev-rules §4.4 example satisfied at the display layer.
+- 2026-07-12 M2 · endTurn opens the resolution summary modal; act splashes queue behind it; game-over card renders after both.
+- 2026-07-12 M3 · Diorama shipped as PROCEDURAL primitives (no GLB downloads at 3 AM — docs/03 §5 fallback made the default). One shared MeshToonMaterial palette; home region only (2nd region gets the world map, not a 2nd diorama).
+- 2026-07-12 M3 · Cosmetic animation = bounded 1.8s rAF bursts after each sync (turbine spin), then the loop STOPS — satisfies both "prosperity is visible" and "no free-running loop".
+- 2026-07-12 M5 · Judge mode `?act=2|3` fast-forwards balancedCoastAware bot @ seed 20260712, region kartli (expands to adjara for the cable). Deterministic; act reached by turn 16/18.
+- 2026-07-12 M5 · Second-region picker is a modal off a floating banner (Act II, while regions<2); Build/Trust panels get region tabs.
+- 2026-07-12 M6 · SFX are synthesized WebAudio tones (no audio assets, works offline); triggered by a store-diff subscription — engine untouched.
+- 2026-07-12 M7 · Score submit = nickname form on the game-over card via frozen saveRepo.submitScore; leaderboard DISPLAY stays AUTH-track (Convex booth screen) per contract — not re-implemented locally.
+
 ## Roadmap (ideas parked tonight, per dev rules §9)
-- (none yet)
+- Region-switchable diorama tab (2nd region currently shown via world map only)
+- Local top-5 leaderboard on game-over (needs a read method — SaveRepo is frozen; AUTH adds it at merge)
