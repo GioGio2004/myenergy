@@ -38,6 +38,28 @@ const S = {
   wind: { ka: 'ქარი', en: 'Wind' },
   water: { ka: 'წყალი', en: 'Water' },
   coast: { ka: 'ზღვა', en: 'Coast' },
+  // Rejection reasons — every disabled action shows WHY (dev rules §4.4)
+  rejGameOver: { ka: 'თამაში დასრულდა', en: 'the game is over' },
+  rejRegionLocked: { ka: 'რეგიონი ჯერ დაკეტილია', en: 'region not unlocked yet' },
+  rejAct: { ka: 'შემდეგ აქტში იხსნება', en: 'unlocks in a later act' },
+  rejMoney: { ka: 'არასაკმარისი თანხა', en: 'not enough money' },
+  rejTrust: { ka: 'არასაკმარისი ნდობა', en: 'not enough trust' },
+  rejWind: { ka: 'აქ ქარი სუსტია', en: 'wind is too weak here' },
+  rejWater: { ka: 'აქ მდინარეები სუსტია', en: 'rivers are too weak here' },
+  rejTrack: { ka: 'ჯერ გამოცდილება დააგროვე (MWh)', en: 'build your track record first (MWh)' },
+  rejCoast: { ka: 'მხოლოდ სანაპირო რეგიონში', en: 'coastal regions only' },
+  rejDependence: { ka: 'დამოკიდებულება ძალიან მაღალია (<40 საჭიროა)', en: 'dependence too high (<40 needed)' },
+  rejNeedsFarm: { ka: 'ჯერ ელექტროსადგური ააშენე', en: 'build a power plant first' },
+  rejMax: { ka: 'უკვე აშენებულია', en: 'already built' },
+  rejNoSlot: { ka: 'თავისუფალი ადგილი არ არის', en: 'no free slot' },
+  rejGigMax: { ka: 'მაქს. 2 საქმე სვლაზე', en: 'max 2 gigs per turn' },
+  rejUseHppFlow: { ka: 'ჰესი ნამახვანის გზას გადის', en: 'HPP goes through the Namakhvani flow' },
+  rejEia: { ka: 'ჯერ გარემოს შეფასება (EIA)', en: 'environmental assessment (EIA) first' },
+  rejCommunity: { ka: '2 სათემო ქმედება სჭირდება', en: 'needs 2 community actions' },
+  rejOnce: { ka: 'უკვე გაკეთებულია', en: 'already done' },
+  rejContractActive: { ka: 'კონტრაქტი უკვე აქტიურია', en: 'a contract is already active' },
+  rejNeedsTranslink: { ka: 'გადამცემი ხაზი სჭირდება', en: 'needs a transmission link' },
+  rejNeedsCable: { ka: 'შავი ზღვის კაბელი სჭირდება', en: 'needs the Black Sea cable' },
 } satisfies Record<string, Entry>
 
 export type StringKey = keyof typeof S

@@ -39,7 +39,7 @@ export function Hud() {
         {/* ⚡ supply-vs-demand dial becomes the HUD star at M2 (needs M1 engine) */}
         <span className="hud-chip">⚡ —/—</span>
         <span className="hud-chip" title={t('trust', lang)}>
-          🤝 {state.trust[home] ?? 0}
+          🤝 {state.regionState[home]?.trust ?? 0}
         </span>
         <span className="hud-chip" title={t('dependence', lang)}>
           🔥 {state.dependence}
