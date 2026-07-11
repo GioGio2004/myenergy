@@ -1,5 +1,4 @@
 import { useStore } from '../../store'
-import { t } from '../../engine/strings'
 import { regionById } from '../../engine/data'
 import { Hud } from '../hud/Hud'
 import { ActionBar } from '../hud/ActionBar'
@@ -9,6 +8,7 @@ import { MarketPanel } from '../hud/MarketPanel'
 import { TurnSummary } from '../hud/TurnSummary'
 import { GameOverCard } from '../hud/GameOverCard'
 import { Toast } from '../hud/Toast'
+import { DioramaView } from '../scene/DioramaView'
 
 export function GameScreen() {
   const { lang, state, panel, summaryOpen, setPanel } = useStore()
@@ -18,10 +18,9 @@ export function GameScreen() {
     <div className="screen game-screen">
       <Hud />
       <main className="game-main">
-        {/* M3 replaces this placeholder with the Three.js diorama mount behind syncScene(state) */}
-        <div className="diorama diorama-placeholder" onClick={() => setPanel(null)}>
-          <span className="diorama-region">{lang === 'ka' ? home.nameKa : home.nameEn}</span>
-          <span className="diorama-note">{t('dioramaSoon', lang)}</span>
+        <div className="diorama-stack" onClick={panel ? () => setPanel(null) : undefined}>
+          <DioramaView />
+          <span className="diorama-label">{lang === 'ka' ? home.nameKa : home.nameEn}</span>
         </div>
         {panel === 'build' && <BuildPanel />}
         {panel === 'trust' && <TrustPanel />}
