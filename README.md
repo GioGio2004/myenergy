@@ -1,34 +1,75 @@
-# DENI — Energy Stewards of Georgia · დენი
+# React + TypeScript + Vite
 
-EnergoHack 2026. Turn-based, mobile-first 3D strategy game (installable PWA): start with ₾10,000, light up a Georgian region, learn the Namakhvani lesson (community trust before megaprojects), escape imported-gas dependence, and win by exporting green energy to the EU through the real Black Sea submarine cable.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-**Stack:** Vite · React 19 · TypeScript · Three.js · zustand · vite-plugin-pwa · Dexie (IndexedDB, offline-first saves) · Clerk (auth) · Convex (cloud saves + realtime leaderboard).
+Currently, two official plugins are available:
 
-## Read first (in order)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-| Doc | What |
-|---|---|
-| [docs/GEGMA-QARTULAD.md](docs/GEGMA-QARTULAD.md) | გეგმის შეჯამება ქართულად |
-| [docs/01-GAME-DESIGN.md](docs/01-GAME-DESIGN.md) | Game design: three acts, turn dilemma, regions, trust/Namakhvani, export |
-| [docs/02-BALANCE-DATA.md](docs/02-BALANCE-DATA.md) | Every number + sim acceptance targets |
-| [docs/03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md) | Stack, repo layout, persistence/auth, 3D rules, milestones M0–M7 |
-| [docs/04-BUILD-PROMPT.md](docs/04-BUILD-PROMPT.md) | Copy-paste prompt that starts the Claude build session |
-| [docs/05-DEVELOPMENT-RULES.md](docs/05-DEVELOPMENT-RULES.md) | **Binding** dev rules: ownership zones, git workflow, testing gates, scope law |
+## React Compiler
 
-`docs/DECISIONS.md` is created during the build — judgment calls land there.
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Team split
+## Expanding the ESLint configuration
 
-- **GAME track** (+ Claude): `src/engine/`, `src/scene/`, `src/ui/`, `sim/` — milestones M0–M7.
-- **AUTH track**: `src/auth/`, `convex/` — Clerk onboarding, cloud saves, merge dialog, booth leaderboard. Built against the `SaveRepo` interface (`src/services/saves.ts`), frozen at M0.
-- Guest mode is sacred: the game always starts instantly and runs fully offline; auth only adds cloud sync.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## Quick start (after M0 exists)
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-```bash
-npm install
-npm run dev          # boots WITHOUT any env keys = guest-only mode
-npx tsx sim/sim.ts   # headless balance/fuzz suite — must be green before merging engine changes
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
 ```
 
-Env (optional, `.env.local`, gitignored): `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_CONVEX_URL`.
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```
