@@ -128,6 +128,47 @@ const S = {
   restart: { ka: 'თავიდან თამაში', en: 'Play again' },
   toTitle: { ka: 'მთავარზე', en: 'Title screen' },
 
+  // ---------- Namakhvani interstitial (M4 — the demo centerpiece) ----------
+  nmkTitle: { ka: 'ნამახვანის გაკვეთილი', en: 'The Namakhvani lesson' },
+  nmkStory: {
+    ka: '2021 წელს საქართველოს ყველაზე დიდი დაგეგმილი ჰესი — ნამახვანი — ჩავარდა. თვეების პროტესტმა პროექტი გააჩერა, რადგან ხალხს არავინ ჰკითხა. ახლა შენი ჯერია: დიდი კაშხალი დიდ ფულს იძლევა — მაგრამ როგორ ააშენებ?',
+    en: 'In 2021 Georgia’s biggest planned dam — Namakhvani — collapsed. Months of protests froze it, because nobody asked the people. Now it’s your turn: a big dam pays big — but how will you build it?',
+  },
+  nmkRush: { ka: 'აჩქარება — ბეტონი ახლავე', en: 'Rush it — concrete now' },
+  nmkRushDesc: {
+    ka: 'გვერდი აუარე თემს. 65% ალბათობით ხალხი გამოვა და კაპიტალის 30% დაიწვება.',
+    en: 'Skip the community. 65% chance the people rise and 30% of the capital burns.',
+  },
+  nmkRight: { ka: 'სწორად გაკეთება', en: 'Do it right' },
+  nmkRightDesc: {
+    ka: 'ნდობა, გზშ და 2 სათემო ქმედება — და მშენებლობა მშვიდად დაიწყება.',
+    en: 'Trust, an EIA and 2 community actions — and construction starts in peace.',
+  },
+  nmkProtest: {
+    ka: 'ხალხი ქუჩაში გამოვიდა! მშენებლობა გაიყინა, კაპიტალის 30% დაიწვა, ნდობა ჩამოიშალა. ეს იყო ნამახვანი, 2021.',
+    en: 'The people took to the streets! Construction frozen, 30% of the capital burned, trust cratered. This was Namakhvani, 2021.',
+  },
+  nmkStarted: {
+    ka: 'მშენებლობა თემის მხარდაჭერით დაიწყო. ჰესი 2 კვარტალში ამუშავდება.',
+    en: 'Construction began with the community behind it. The dam comes online in 2 quarters.',
+  },
+  nmkClose: { ka: 'გასაგებია', en: 'Understood' },
+
+  // ---------- act splashes ----------
+  act2Title: { ka: 'აქტი II — გაანათე საქართველო', en: 'Act II — Power Georgia' },
+  act2Goal: {
+    ka: 'შენი რეგიონი ანათებს! ახლა გააფართოვე: მეორე რეგიონი, გადამცემი ხაზი და საცავი (≥200 MWh). ორივე რეგიონი ≥90% საკუთარი ენერგიით.',
+    en: 'Your region shines! Now expand: a second region, a transmission link and storage (≥200 MWh). Both regions ≥90% self-covered.',
+  },
+  act3Title: { ka: 'აქტი III — ევროპის მწვანე ბატარეა', en: 'Act III — Europe’s green battery' },
+  act3Goal: {
+    ka: 'დროა მსოფლიოსკენ: იყიდე შავი ზღვის კაბელის წილი (დამოკიდებულება <40) და შეასრულე ევროკავშირის 4-კვარტლიანი კონტრაქტი. ეს არის გამარჯვება.',
+    en: 'Time to face the world: buy the Black Sea cable share (dependence <40) and fulfil the EU’s 4-quarter contract. That is victory.',
+  },
+  actSplashGo: { ka: 'წინ!', en: 'Onward!' },
+
+  factLabel: { ka: 'ფაქტი', en: 'Fact' },
+
   // ---------- rejection reasons (dev rules §4.4) ----------
   rejGameOver: { ka: 'თამაში დასრულდა', en: 'the game is over' },
   rejRegionLocked: { ka: 'რეგიონი ჯერ დაკეტილია', en: 'region not unlocked yet' },
@@ -322,4 +363,40 @@ export const EVENT_TEXT: Record<EventId, { name: Entry; desc: Entry; icon: strin
     name: { ka: 'საპროტესტო აქციები', en: 'Protests' },
     desc: { ka: 'ხალხი გამოვიდა — მშენებლობა გაჩერდა, კაპიტალის 30% დაიწვა.', en: 'The people rose — construction frozen, 30% of capital burned.' },
   },
+}
+
+// ---------- real fact cards (docs/01 §9-10: every event ends with a fact) ----------
+export const FACTS: Entry[] = [
+  { ka: 'საქართველო ელექტროენერგიის ~79%-ს ჰიდროსადგურებით გამოიმუშავებს.', en: 'Georgia generates ~79% of its electricity from hydropower.' },
+  { ka: 'საქართველო ბუნებრივი გაზის ~100%-ს ყიდულობს — 84% აზერბაიჯანიდან.', en: 'Georgia imports ~100% of its natural gas — 84% from Azerbaijan.' },
+  { ka: 'ყოველ ზამთარს საქართველო დენს ყიდულობს: მდინარეები იკლებს, მოთხოვნა იზრდება.', en: 'Every winter Georgia imports electricity: rivers run low while demand peaks.' },
+  { ka: 'შავი ზღვის კაბელი: 1155 კმ, $2.3 მლრდ, საბოლოო გადაწყვეტილება — 2026 აპრილი, ამუშავება ~2029.', en: 'The Black Sea cable: 1,155 km, $2.3B, final investment decision April 2026, online ~2029.' },
+  { ka: 'გორის ქარის სადგური (2016) საქართველოს პირველი ქარის ფერმაა — 20.7 МВт.', en: 'Gori wind farm (2016) was Georgia’s first — 20.7 MW.' },
+  { ka: 'ნამახვანი ჰესი (433 МВт) 2021-ში თვეების პროტესტმა გააჩერა — თემს არავინ ჰკითხა.', en: 'Namakhvani HPP (433 MW) was stopped by months of protests in 2021 — the community was never asked.' },
+  { ka: 'ენგურის კაშხალი მსოფლიოში ერთ-ერთი ყველაზე მაღალი თაღოვანი კაშხალია — 271,5 მ.', en: 'The Enguri dam is one of the world’s tallest arch dams — 271.5 m.' },
+  { ka: 'ენგური საქართველოს გამომუშავების ~40%-ს იძლევა — ერთი კაშხალი.', en: 'Enguri alone provides ~40% of Georgia’s generation — a single dam.' },
+  { ka: 'საქართველოს ჰიდროპოტენციალის მხოლოდ ~25%-ია ათვისებული.', en: 'Only ~25% of Georgia’s hydro potential is developed.' },
+  { ka: 'მოთხოვნა ელექტროენერგიაზე საქართველოში წელიწადში ~3–4%-ით იზრდება.', en: 'Electricity demand in Georgia grows ~3–4% every year.' },
+  { ka: 'საქართველო თურქეთს დენს უკვე ჰყიდის — ახალციხის 700 МВт HVDC ხაზით.', en: 'Georgia already sells power to Turkey — via the 700 MW Akhaltsikhe HVDC link.' },
+  { ka: 'ზამთრის დეფიციტს გარდაბნის გაზის სადგურები ფარავენ — იმპორტული საწვავით.', en: 'Georgia’s winter deficit is covered by the Gardabani gas plants — on imported fuel.' },
+  { ka: 'ჰიდროაკუმულაცია საქართველოში ჯერ არ აშენებულა — რელიეფი კი იდეალურია.', en: 'No pumped-hydro storage has been built in Georgia yet — though the terrain is ideal.' },
+  { ka: '2025 გაზაფხულზე ენგურის დაბალმა დონემ რეკორდული იმპორტი გამოიწვია.', en: 'In spring 2025 a low Enguri reservoir forced record electricity imports.' },
+  { ka: 'კახეთი საქართველოს ყველაზე მზიანი კუთხეა — და სეტყვიანიც.', en: 'Kakheti is Georgia’s sunniest corner — and its most hail-prone.' },
+  { ka: 'თამაშში დრო ~×3-ჯერ არის შეკუმშული — მაგრამ პროპორციები პატიოსანია.', en: 'Time in this game is compressed ~×3 — but the ratios are honest.' },
+]
+
+/** Event → most relevant fact index; events without a natural pair rotate by turn. */
+export const EVENT_FACT: Partial<Record<EventId, number>> = {
+  hail: 14,
+  drought: 13,
+  enguriLow: 7,
+  gasspike: 1,
+  coldsnapTR: 10,
+  stormBS: 3,
+  euGrantCable: 3,
+  cloudsSamegrelo: 0,
+  protest: 5,
+  inspection: 9,
+  elections: 8,
+  viral: 4,
 }

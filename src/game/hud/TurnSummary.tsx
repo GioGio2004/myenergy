@@ -1,5 +1,5 @@
 import { useStore } from '../../store'
-import { EVENT_TEXT, pick, t } from '../../engine/strings'
+import { EVENT_FACT, EVENT_TEXT, FACTS, pick, t } from '../../engine/strings'
 import type { StringKey } from '../../engine/strings'
 import { regionById } from '../../engine/data'
 import type { Season } from '../../engine/types'
@@ -27,6 +27,8 @@ export function TurnSummary() {
   const r = state.lastReport
   const net = r.revenue - r.costs
   const ev = r.event ? EVENT_TEXT[r.event] : null
+  // every event ends with a REAL fact (docs/01 §9); unpaired events rotate the list
+  const fact = r.event ? FACTS[EVENT_FACT[r.event] ?? r.turn % FACTS.length] : null
 
   return (
     <div className="modal-backdrop" onClick={closeSummary}>
@@ -43,6 +45,11 @@ export function TurnSummary() {
               <br />
               {pick(ev.desc, lang)}
             </span>
+          </div>
+        )}
+        {fact && (
+          <div className="fact-card">
+            💡 <b>{t('factLabel', lang)}:</b> {pick(fact, lang)}
           </div>
         )}
 

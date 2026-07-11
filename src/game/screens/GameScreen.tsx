@@ -8,10 +8,12 @@ import { MarketPanel } from '../hud/MarketPanel'
 import { TurnSummary } from '../hud/TurnSummary'
 import { GameOverCard } from '../hud/GameOverCard'
 import { Toast } from '../hud/Toast'
+import { NamakhvaniModal } from '../hud/NamakhvaniModal'
+import { ActSplash } from '../hud/ActSplash'
 import { DioramaView } from '../scene/DioramaView'
 
 export function GameScreen() {
-  const { lang, state, panel, summaryOpen, setPanel } = useStore()
+  const { lang, state, panel, summaryOpen, hppOpen, actSplash, setPanel } = useStore()
   if (!state) return null
   const home = regionById(state.regions[0])
   return (
@@ -28,8 +30,10 @@ export function GameScreen() {
         <Toast />
       </main>
       <ActionBar />
+      {hppOpen && <NamakhvaniModal />}
       {summaryOpen && state.lastReport && <TurnSummary />}
-      {state.gameOver && !summaryOpen && <GameOverCard />}
+      {!summaryOpen && actSplash && <ActSplash />}
+      {state.gameOver && !summaryOpen && !actSplash && <GameOverCard />}
     </div>
   )
 }

@@ -22,12 +22,16 @@ interface Store {
   lastRejection: StringKey | null
   panel: Panel | null // open bottom sheet
   summaryOpen: boolean // turn-resolution modal after endTurn
+  hppOpen: boolean // Namakhvani interstitial
+  actSplash: 2 | 3 | null // shown once when an act is reached (after the summary)
 
   boot(): Promise<void>
   setLang(lang: Lang): void
   setScreen(screen: Screen): void
   setPanel(panel: Panel | null): void
+  setHppOpen(open: boolean): void
   closeSummary(): void
+  closeActSplash(): void
   clearRejection(): void
   newGame(region: RegionId): void
   continueGame(): Promise<void>
@@ -55,6 +59,8 @@ export const useStore = create<Store>((set, get) => ({
   lastRejection: null,
   panel: null,
   summaryOpen: false,
+  hppOpen: false,
+  actSplash: null,
 
   async boot() {
     const q = urlParams()
@@ -81,8 +87,16 @@ export const useStore = create<Store>((set, get) => ({
     set({ panel, lastRejection: null })
   },
 
+  setHppOpen(open) {
+    set({ hppOpen: open })
+  },
+
   closeSummary() {
     set({ summaryOpen: false })
+  },
+
+  closeActSplash() {
+    set({ actSplash: null })
   },
 
   clearRejection() {
@@ -108,7 +122,11 @@ export const useStore = create<Store>((set, get) => ({
     set({ state, lastRejection: (rejected as StringKey) ?? null })
     if (!rejected) {
       saveRepo.persist(state).catch(() => {}) // autosave EVERY turn
-      if (action.type === 'endTurn') set({ summaryOpen: true, panel: null })
+      if (action.type === 'endTurn') {
+        set({ summaryOpen: true, panel: null })
+        // act splash queues behind the summary modal
+        if (state.act > prev.act && (state.act === 2 || state.act === 3)) set({ actSplash: state.act })
+      }
     }
   },
 }))

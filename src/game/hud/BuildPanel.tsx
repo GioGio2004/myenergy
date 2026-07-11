@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../../store'
 import { BUILDABLE_TEXT, pick, t } from '../../engine/strings'
 import type { StringKey } from '../../engine/strings'
-import { buildRejection, effectiveCost, slotOccupied } from '../../engine/engine'
+import { buildRejection, effectiveCost, hppRejection, slotOccupied } from '../../engine/engine'
 import * as D from '../../engine/data'
 import type { BuildableId, GameState, RegionId } from '../../engine/types'
 
@@ -42,7 +42,7 @@ function Stars({ n }: { n: 1 | 2 | 3 }) {
 }
 
 export function BuildPanel() {
-  const { lang, state, dispatch } = useStore()
+  const { lang, state, dispatch, setHppOpen } = useStore()
   const [expanded, setExpanded] = useState<BuildableId | null>(null)
   if (!state) return null
   const region = state.regions[0] // Act I: home region (multi-region UI lands at M5)
@@ -55,7 +55,9 @@ export function BuildPanel() {
         {ORDER.map((id) => {
           const def = D.BUILDABLES[id]
           const text = BUILDABLE_TEXT[id]
-          const rej = buildRejection(state, id, region)
+          // HPP goes through the Namakhvani interstitial; its row gates on rush
+          // feasibility (money/water/track/slot) — the interstitial shows the rest.
+          const rej = id === 'hpp' ? hppRejection(state, region, 'rush') : buildRejection(state, id, region)
           const cost = effectiveCost(state, id, region)
           const open = expanded === id
           const isStorage = def.kind === 'storage'
@@ -67,7 +69,8 @@ export function BuildPanel() {
                 className="build-main"
                 onClick={() => {
                   if (rej) return
-                  if (def.slot) setExpanded(open ? null : id)
+                  if (id === 'hpp') setHppOpen(true)
+                  else if (def.slot) setExpanded(open ? null : id)
                   else dispatch({ type: 'build', buildable: id, region })
                 }}
                 disabled={Boolean(rej)}

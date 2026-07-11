@@ -353,3 +353,23 @@ button.build-row:disabled { cursor: not-allowed; }
   pointer-events: none;
   z-index: 2;
 }
+
+/* ---------- M4: Namakhvani, act splash, fact cards ---------- */
+.nmk-story { font-size: 14px; line-height: 1.55; color: var(--cream); }
+.nmk-choice { display: flex; flex-direction: column; gap: 4px; text-align: left; align-items: flex-start; }
+.nmk-choice b { font-size: 15px; }
+.nmk-choice span { font-size: 12px; color: var(--cream-dim); }
+.nmk-rush { border-color: rgba(193, 18, 31, 0.55); }
+.nmk-right { border-color: rgba(106, 153, 78, 0.6); }
+.fact-card {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--cream-dim);
+  background: rgba(242, 165, 65, 0.08);
+  border: 1px dashed rgba(242, 165, 65, 0.4);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+.fact-card b { color: var(--sun); }
+.act-splash { background: rgba(10, 7, 15, 0.88); }
+.act-splash-icon { font-size: 52px; }
