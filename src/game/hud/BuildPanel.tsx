@@ -5,6 +5,7 @@ import type { StringKey } from '../../engine/strings'
 import { buildRejection, effectiveCost, hppRejection, slotOccupied } from '../../engine/engine'
 import * as D from '../../engine/data'
 import type { BuildableId, GameState, RegionId } from '../../engine/types'
+import { RegionTabs } from './RegionTabs'
 
 // Ladder order: everything is listed, later-act items visibly locked — the tree
 // IS the progression teaser. Disabled rows always show WHY (dev rules §4.4).
@@ -44,13 +45,15 @@ function Stars({ n }: { n: 1 | 2 | 3 }) {
 export function BuildPanel() {
   const { lang, state, dispatch, setHppOpen } = useStore()
   const [expanded, setExpanded] = useState<BuildableId | null>(null)
+  const [selRegion, setSelRegion] = useState<RegionId | null>(null)
   if (!state) return null
-  const region = state.regions[0] // Act I: home region (multi-region UI lands at M5)
+  const region = selRegion && state.regions.includes(selRegion) ? selRegion : state.regions[0]
   const rdef = D.regionById(region)
 
   return (
     <section className="panel">
       <h3 className="panel-title">🏗 {t('buildPanelTitle', lang)}</h3>
+      <RegionTabs value={region} onChange={(r) => { setSelRegion(r); setExpanded(null) }} />
       <div className="panel-list">
         {ORDER.map((id) => {
           const def = D.BUILDABLES[id]

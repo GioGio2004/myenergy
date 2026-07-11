@@ -1,19 +1,23 @@
+import { useState } from 'react'
 import { useStore } from '../../store'
 import { TRUST_ACTION_TEXT, pick, t } from '../../engine/strings'
 import * as D from '../../engine/data'
-import type { TrustActionId } from '../../engine/types'
+import type { RegionId, TrustActionId } from '../../engine/types'
+import { RegionTabs } from './RegionTabs'
 
 const ORDER: TrustActionId[] = ['townhall', 'school', 'eia', 'hiring', 'revshare']
 
 export function TrustPanel() {
   const { lang, state, dispatch } = useStore()
+  const [selRegion, setSelRegion] = useState<RegionId | null>(null)
   if (!state) return null
-  const region = state.regions[0]
+  const region = selRegion && state.regions.includes(selRegion) ? selRegion : state.regions[0]
   const rs = state.regionState[region]!
 
   return (
     <section className="panel">
       <h3 className="panel-title">🤝 {t('trustPanelTitle', lang)}</h3>
+      <RegionTabs value={region} onChange={setSelRegion} />
 
       <div className="trust-meter">
         <div className="trust-bar">

@@ -169,6 +169,25 @@ const S = {
 
   factLabel: { ka: 'ფაქტი', en: 'Fact' },
 
+  // ---------- Act II/III UI (M5) ----------
+  expandBanner: { ka: 'დაამატე მეორე რეგიონი', en: 'Add a second region' },
+  expandTitle: { ka: 'აირჩიე მეორე რეგიონი', en: 'Choose your second region' },
+  expandHint: {
+    ka: 'გახსოვდეს: კაბელს სანაპირო რეგიონი სჭირდება (აჭარა ან სამეგრელო).',
+    en: 'Remember: the cable needs a coastal region (Adjara or Samegrelo).',
+  },
+  worldMapBtn: { ka: 'ექსპორტის რუკა', en: 'Export map' },
+  worldMapTitle: { ka: 'ენერგია მოძრაობს', en: 'Energy on the move' },
+  mapGeorgia: { ka: 'საქართველო', en: 'Georgia' },
+  mapTurkey: { ka: 'თურქეთი', en: 'Turkey' },
+  mapArmenia: { ka: 'სომხეთი', en: 'Armenia' },
+  mapEurope: { ka: 'ევროპა', en: 'Europe' },
+  mapCableNote: {
+    ka: 'შავი ზღვის კაბელი: 1155 კმ წყალქვეშ — საქართველოდან რუმინეთამდე.',
+    en: 'The Black Sea cable: 1,155 km under the sea — Georgia to Romania.',
+  },
+  noExportsYet: { ka: 'ჯერ ექსპორტი არ გაქვს — ხაზები და კონტრაქტები ბაზარშია.', en: 'No exports yet — links and contracts live in the Market.' },
+
   // ---------- rejection reasons (dev rules §4.4) ----------
   rejGameOver: { ka: 'თამაში დასრულდა', en: 'the game is over' },
   rejRegionLocked: { ka: 'რეგიონი ჯერ დაკეტილია', en: 'region not unlocked yet' },

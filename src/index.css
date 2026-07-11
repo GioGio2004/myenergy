@@ -373,3 +373,26 @@ button.build-row:disabled { cursor: not-allowed; }
 .fact-card b { color: var(--sun); }
 .act-splash { background: rgba(10, 7, 15, 0.88); }
 .act-splash-icon { font-size: 52px; }
+
+/* ---------- M5: expand, region tabs, world map ---------- */
+.expand-banner {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  font-size: 14px;
+  border-color: var(--sun);
+  color: var(--sun);
+  background: rgba(26, 20, 35, 0.92);
+  white-space: nowrap;
+}
+.region-tabs { margin-bottom: 10px; }
+.map-btn { width: 100%; margin-bottom: 10px; }
+.world-map { width: 100%; height: auto; border-radius: 12px; background: #1f2a36; }
+.map-label { font-size: 11px; fill: var(--cream-dim); font-family: inherit; }
+.map-label-geo { fill: var(--sun); font-weight: 700; }
+.map-arc { fill: none; stroke: rgba(250,243,227,0.12); stroke-width: 2; stroke-dasharray: 5 5; }
+.map-arc.on { stroke: rgba(116,164,188,0.75); animation: arcflow 1.2s linear infinite; }
+.map-arc.active { stroke: var(--sun); stroke-width: 3; }
+@keyframes arcflow { to { stroke-dashoffset: -20; } }

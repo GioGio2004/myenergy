@@ -3,6 +3,7 @@
 
 import { create } from 'zustand'
 import { createInitialState, reduce } from './engine/engine'
+import { JUDGE_REGION, JUDGE_SEED, judgeMidgame } from './engine/judge'
 import { seedFromString } from './engine/rng'
 import { REGIONS } from './engine/data'
 import type { GameAction, GameState, RegionId } from './engine/types'
@@ -24,12 +25,16 @@ interface Store {
   summaryOpen: boolean // turn-resolution modal after endTurn
   hppOpen: boolean // Namakhvani interstitial
   actSplash: 2 | 3 | null // shown once when an act is reached (after the summary)
+  expandOpen: boolean // second-region picker (Act II)
+  mapOpen: boolean // world export map
 
   boot(): Promise<void>
   setLang(lang: Lang): void
   setScreen(screen: Screen): void
   setPanel(panel: Panel | null): void
   setHppOpen(open: boolean): void
+  setExpandOpen(open: boolean): void
+  setMapOpen(open: boolean): void
   closeSummary(): void
   closeActSplash(): void
   clearRejection(): void
@@ -61,11 +66,20 @@ export const useStore = create<Store>((set, get) => ({
   summaryOpen: false,
   hppOpen: false,
   actSplash: null,
+  expandOpen: false,
+  mapOpen: false,
 
   async boot() {
     const q = urlParams()
+    if (q.act === '2' || q.act === '3') {
+      // Judge mode: deterministic prepared midgame (docs/03 §10)
+      const seed = q.seed ? (/^\d+$/.test(q.seed) ? Number(q.seed) >>> 0 : seedFromString(q.seed)) : JUDGE_SEED
+      const state = judgeMidgame(seed, q.region ?? JUDGE_REGION, Number(q.act) as 2 | 3)
+      set({ booted: true, fxHigh: q.fxHigh, state, screen: 'game', actSplash: Number(q.act) as 2 | 3 })
+      return
+    }
     if (q.seed && q.region) {
-      // Deterministic replay entry: ?seed=&region=(&act= at M5)
+      // Deterministic replay entry: ?seed=&region=
       const seed = /^\d+$/.test(q.seed) ? Number(q.seed) >>> 0 : seedFromString(q.seed)
       set({ booted: true, fxHigh: q.fxHigh, state: createInitialState(seed, q.region), screen: 'game' })
       return
@@ -89,6 +103,14 @@ export const useStore = create<Store>((set, get) => ({
 
   setHppOpen(open) {
     set({ hppOpen: open })
+  },
+
+  setExpandOpen(open) {
+    set({ expandOpen: open })
+  },
+
+  setMapOpen(open) {
+    set({ mapOpen: open })
   },
 
   closeSummary() {

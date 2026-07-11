@@ -8,7 +8,7 @@ const CUSTOMER_TEXT: Record<'armenia' | 'eu', StringKey> = { armenia: 'customerA
 const CUSTOMER_ICON: Record<'armenia' | 'eu', string> = { armenia: '🇦🇲', eu: '🇪🇺' }
 
 export function MarketPanel() {
-  const { lang, state, dispatch } = useStore()
+  const { lang, state, dispatch, setMapOpen } = useStore()
   if (!state) return null
   const peaker = hasBuilt(state, 'gaspeaker')
   const link = hasBuilt(state, 'translink')
@@ -27,6 +27,11 @@ export function MarketPanel() {
   return (
     <section className="panel">
       <h3 className="panel-title">⚖️ {t('marketPanelTitle', lang)}</h3>
+      {state.act >= 2 && (
+        <button className="btn btn-small map-btn" onClick={() => setMapOpen(true)}>
+          🗺️ {t('worldMapBtn', lang)}
+        </button>
+      )}
 
       {/* Gas peaker toggle */}
       <div className="market-block">
