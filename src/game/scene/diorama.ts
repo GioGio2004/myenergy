@@ -139,6 +139,14 @@ export class Diorama {
     this.scene.background = new THREE.Color(blackout ? SKY_BLACKOUT : SKY[season])
     this.hemi.intensity = blackout ? 0.25 : season === 'winter' ? 0.9 : 1.15
     this.sun.intensity = blackout ? 0.15 : season === 'winter' ? 1.0 : 1.6
+    const sunPos: Record<Season, [number, number, number]> = {
+      spring: [6, 10, 4],
+      summer: [2, 13, 2],
+      autumn: [-5, 8, 5],
+      winter: [-7, 5, 6],
+    }
+    this.sun.position.set(...sunPos[season])
+    this.sun.color.set(season === 'autumn' ? 0xffd9a0 : season === 'winter' ? 0xdfe8ff : 0xffe6b3)
 
     // ---- village: prosperity adds houses; windows die in a blackout ----
     this.disposeChildren(this.villageGroup)

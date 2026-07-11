@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useStore } from '../../store'
 import { t } from '../../engine/strings'
 import { forecast, seasonOf, storageCapacity } from '../../engine/engine'
+import { isMuted, setMuted } from '../../audio'
 import type { Season } from '../../engine/types'
 import type { StringKey } from '../../engine/strings'
 
@@ -14,6 +16,7 @@ const SEASON_ICON: Record<Season, string> = { spring: '🌱', summer: '☀️', 
 
 export function Hud() {
   const { lang, state, setLang } = useStore()
+  const [muted, setMutedUi] = useState(isMuted())
   if (!state) return null
   const season = seasonOf(state.turn)
   const home = state.regions[0]
@@ -44,7 +47,17 @@ export function Hud() {
             </span>
           )}
         </span>
-        <button className="hud-chip hud-lang" onClick={() => setLang(lang === 'ka' ? 'en' : 'ka')}>
+        <button
+          className="hud-chip hud-lang"
+          title={t('soundLabel', lang)}
+          onClick={() => {
+            setMuted(!muted)
+            setMutedUi(!muted)
+          }}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
+        <button className="hud-chip hud-lang hud-lang-btn" onClick={() => setLang(lang === 'ka' ? 'en' : 'ka')}>
           {lang === 'ka' ? 'EN' : 'ქა'}
         </button>
       </div>

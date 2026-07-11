@@ -13,7 +13,7 @@ import { ActSplash } from '../hud/ActSplash'
 import { ExpandModal } from '../hud/ExpandModal'
 import { ExportMapModal } from '../hud/ExportMapModal'
 import { DioramaView } from '../scene/DioramaView'
-import { t } from '../../engine/strings'
+import { EVENT_TEXT, pick, t } from '../../engine/strings'
 
 export function GameScreen() {
   const { lang, state, panel, summaryOpen, hppOpen, actSplash, expandOpen, mapOpen, setPanel, setExpandOpen } =
@@ -28,6 +28,15 @@ export function GameScreen() {
         <div className="diorama-stack" onClick={panel ? () => setPanel(null) : undefined}>
           <DioramaView />
           <span className="diorama-label">{lang === 'ka' ? home.nameKa : home.nameEn}</span>
+          {state.effects.length > 0 && (
+            <div className="effects-strip">
+              {state.effects.map((e, i) => (
+                <span key={i} className="effect-chip">
+                  {EVENT_TEXT[e.event].icon} {pick(EVENT_TEXT[e.event].name, lang)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {canExpand && !panel && (
           <button className="btn expand-banner" onClick={() => setExpandOpen(true)}>

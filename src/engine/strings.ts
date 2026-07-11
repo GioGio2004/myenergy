@@ -168,6 +168,7 @@ const S = {
   actSplashGo: { ka: 'წინ!', en: 'Onward!' },
 
   factLabel: { ka: 'ფაქტი', en: 'Fact' },
+  soundLabel: { ka: 'ხმა', en: 'Sound' },
 
   // ---------- Act II/III UI (M5) ----------
   expandBanner: { ka: 'დაამატე მეორე რეგიონი', en: 'Add a second region' },

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStore } from './store'
+import { initAudio } from './audio'
 import { TitleScreen } from './game/screens/TitleScreen'
 import { RegionSelectScreen } from './game/screens/RegionSelectScreen'
 import { GameScreen } from './game/screens/GameScreen'
@@ -11,6 +12,7 @@ export default function App() {
 
   useEffect(() => {
     void boot() // loads prefs + save presence; never mutates game state
+    initAudio() // SFX side-effect layer: reads store, never writes game state
   }, [boot])
 
   if (!booted) return <div className="screen boot-screen" />

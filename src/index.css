@@ -396,3 +396,24 @@ button.build-row:disabled { cursor: not-allowed; }
 .map-arc.on { stroke: rgba(116,164,188,0.75); animation: arcflow 1.2s linear infinite; }
 .map-arc.active { stroke: var(--sun); stroke-width: 3; }
 @keyframes arcflow { to { stroke-dashoffset: -20; } }
+
+/* ---------- M6: effects strip, mute ---------- */
+.hud-lang-btn { margin-left: 0; }
+.effects-strip {
+  position: absolute;
+  top: 10px; right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  z-index: 2;
+  pointer-events: none;
+}
+.effect-chip {
+  font-size: 11px;
+  background: rgba(26, 20, 35, 0.82);
+  border: 1px solid rgba(242, 165, 65, 0.4);
+  color: var(--cream);
+  border-radius: 99px;
+  padding: 4px 9px;
+}
