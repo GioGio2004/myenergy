@@ -10,6 +10,7 @@ import type { Lang, StringKey } from './engine/strings'
 import { saveRepo } from './services/saves'
 
 export type Screen = 'title' | 'region' | 'game'
+export type Panel = 'build' | 'trust' | 'market'
 
 interface Store {
   booted: boolean
@@ -19,10 +20,15 @@ interface Store {
   fxHigh: boolean
   state: GameState | null
   lastRejection: StringKey | null
+  panel: Panel | null // open bottom sheet
+  summaryOpen: boolean // turn-resolution modal after endTurn
 
   boot(): Promise<void>
   setLang(lang: Lang): void
   setScreen(screen: Screen): void
+  setPanel(panel: Panel | null): void
+  closeSummary(): void
+  clearRejection(): void
   newGame(region: RegionId): void
   continueGame(): Promise<void>
   dispatch(action: GameAction): void
@@ -47,6 +53,8 @@ export const useStore = create<Store>((set, get) => ({
   fxHigh: false,
   state: null,
   lastRejection: null,
+  panel: null,
+  summaryOpen: false,
 
   async boot() {
     const q = urlParams()
@@ -66,19 +74,31 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   setScreen(screen) {
-    set({ screen })
+    set({ screen, panel: null, summaryOpen: false })
+  },
+
+  setPanel(panel) {
+    set({ panel, lastRejection: null })
+  },
+
+  closeSummary() {
+    set({ summaryOpen: false })
+  },
+
+  clearRejection() {
+    set({ lastRejection: null })
   },
 
   newGame(region) {
     const seed = (crypto.getRandomValues(new Uint32Array(1))[0]) >>> 0
     const state = createInitialState(seed, region)
-    set({ state, screen: 'game', lastRejection: null })
+    set({ state, screen: 'game', lastRejection: null, panel: null, summaryOpen: false })
     saveRepo.persist(state).catch(() => {})
   },
 
   async continueGame() {
     const save = await saveRepo.load().catch(() => null)
-    if (save) set({ state: save.state, screen: 'game', lastRejection: null })
+    if (save) set({ state: save.state, screen: 'game', lastRejection: null, panel: null, summaryOpen: false })
   },
 
   dispatch(action) {
@@ -86,6 +106,9 @@ export const useStore = create<Store>((set, get) => ({
     if (!prev) return
     const { state, rejected } = reduce(prev, action)
     set({ state, lastRejection: (rejected as StringKey) ?? null })
-    if (!rejected) saveRepo.persist(state).catch(() => {}) // autosave EVERY turn
+    if (!rejected) {
+      saveRepo.persist(state).catch(() => {}) // autosave EVERY turn
+      if (action.type === 'endTurn') set({ summaryOpen: true, panel: null })
+    }
   },
 }))

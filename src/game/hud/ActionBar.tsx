@@ -1,25 +1,33 @@
 import { useStore } from '../../store'
 import { t } from '../../engine/strings'
+import type { Panel } from '../../store'
+
+const PANELS: Array<{ id: Panel; icon: string; key: 'build' | 'trust' | 'market' }> = [
+  { id: 'build', icon: '🏗', key: 'build' },
+  { id: 'trust', icon: '🤝', key: 'trust' },
+  { id: 'market', icon: '⚖️', key: 'market' },
+]
 
 export function ActionBar() {
-  const { lang, dispatch, state } = useStore()
+  const { lang, dispatch, state, panel, setPanel } = useStore()
   const over = Boolean(state?.gameOver)
-  // Build/Trust/Market panels arrive with the M1 engine; disabled buttons always
-  // show WHY (dev rules §4.4)
   return (
     <nav className="action-bar">
-      <button className="btn" disabled title={t('comingM1', lang)}>
-        🏗 {t('build', lang)}
-      </button>
-      <button className="btn" disabled title={t('comingM1', lang)}>
-        🤝 {t('trust', lang)}
-      </button>
-      <button className="btn" disabled title={t('comingM1', lang)}>
-        ⚖️ {t('market', lang)}
-      </button>
+      {PANELS.map((p) => (
+        <button
+          key={p.id}
+          className={`btn ${panel === p.id ? 'btn-active' : ''}`}
+          disabled={over}
+          title={over ? t('rejGameOver', lang) : undefined}
+          onClick={() => setPanel(panel === p.id ? null : p.id)}
+        >
+          {p.icon} {t(p.key, lang)}
+        </button>
+      ))}
       <button
         className="btn btn-primary btn-endturn"
         disabled={over}
+        title={over ? t('rejGameOver', lang) : undefined}
         onClick={() => dispatch({ type: 'endTurn' })}
       >
         ⏭ {t('endTurn', lang)}

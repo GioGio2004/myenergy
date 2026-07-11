@@ -168,6 +168,35 @@ export function buildRejection(state: GameState, type: BuildableId, region: Regi
   return null
 }
 
+/** What the coming quarter looks like BEFORE endTurn: expected own generation
+ *  (current effects, no new event) vs demand. Pure — the HUD dial reads this. */
+export interface Forecast {
+  demand: number // total, winter multipliers applied
+  gen: number // your clean generation at this season
+  storageAvail: number
+  peakerAvail: number
+  contractVolume: number // committed export served before home demand
+}
+
+export function forecast(state: GameState): Forecast {
+  const season = seasonOf(state.turn)
+  let demand = 0
+  let gen = 0
+  for (const r of state.regions) {
+    const rs = state.regionState[r]!
+    const winterExtra = season === 'winter' ? D.WINTER_DEMAND_MULT * (D.REGION_WINTER_DEMAND_EXTRA[r] ?? 1) : 1
+    demand += rs.demand * winterExtra
+    for (const p of builtPlants(state).filter((p) => p.region === r)) gen += plantOutput(state, p, season)
+  }
+  return {
+    demand,
+    gen,
+    storageAvail: Math.min(state.storedMWh, storageCapacity(state)),
+    peakerAvail: state.gasOn && hasBuilt(state, 'gaspeaker') ? D.GAS_PEAKER_CAP : 0,
+    contractVolume: state.contract ? D.CONTRACTS[state.contract.customer].volume : 0,
+  }
+}
+
 export function hppRejection(state: GameState, region: RegionId, choice: 'rush' | 'right'): string | null {
   const def = D.BUILDABLES.hpp
   const rdef = D.regionById(region)
