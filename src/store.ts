@@ -2,16 +2,33 @@
 // Components dispatch actions and read state — they never compute game logic.
 
 import { create } from 'zustand'
-import { createInitialState, reduce } from './engine/engine'
+import { cityStats, createInitialState, reduce } from './engine/engine'
 import { JUDGE_REGION, JUDGE_SEED, judgeMidgame } from './engine/judge'
 import { seedFromString } from './engine/rng'
 import { REGIONS } from './engine/data'
-import type { GameAction, GameState, RegionId } from './engine/types'
+import type { BuildableId, GameAction, GameState, RegionId } from './engine/types'
 import type { Lang, StringKey } from './engine/strings'
 import { saveRepo } from './services/saves'
 
 export type Screen = 'title' | 'region' | 'game'
 export type Panel = 'build' | 'trust' | 'market'
+
+export interface PlacementMode {
+  buildable: BuildableId
+  region: RegionId
+}
+
+export interface LiveChange {
+  id: number
+  region: RegionId
+  kind: GameAction['type']
+  money: number
+  trust: number
+  jobs: number
+  happiness: number
+  coverage: number
+  population: number
+}
 
 interface Store {
   booted: boolean
@@ -27,6 +44,10 @@ interface Store {
   actSplash: 2 | 3 | null // shown once when an act is reached (after the summary)
   expandOpen: boolean // second-region picker (Act II)
   mapOpen: boolean // world export map
+  viewRegion: RegionId | null // region currently shown by the diorama
+  placement: PlacementMode | null
+  selectedPlantId: number | null
+  lastChange: LiveChange | null
 
   boot(): Promise<void>
   setLang(lang: Lang): void
@@ -35,6 +56,10 @@ interface Store {
   setHppOpen(open: boolean): void
   setExpandOpen(open: boolean): void
   setMapOpen(open: boolean): void
+  setViewRegion(region: RegionId): void
+  beginPlacement(buildable: BuildableId, region: RegionId): void
+  cancelPlacement(): void
+  selectPlant(plantId: number | null): void
   closeSummary(): void
   closeActSplash(): void
   clearRejection(): void
@@ -68,6 +93,10 @@ export const useStore = create<Store>((set, get) => ({
   actSplash: null,
   expandOpen: false,
   mapOpen: false,
+  viewRegion: null,
+  placement: null,
+  selectedPlantId: null,
+  lastChange: null,
 
   async boot() {
     const q = urlParams()
@@ -78,17 +107,17 @@ export const useStore = create<Store>((set, get) => ({
       // Judge mode: deterministic prepared midgame (docs/03 §10)
       const seed = q.seed ? (/^\d+$/.test(q.seed) ? Number(q.seed) >>> 0 : seedFromString(q.seed)) : JUDGE_SEED
       const state = judgeMidgame(seed, q.region ?? JUDGE_REGION, Number(q.act) as 2 | 3)
-      set({ booted: true, fxHigh: q.fxHigh, state, screen: 'game', actSplash: Number(q.act) as 2 | 3 })
+      set({ booted: true, fxHigh: q.fxHigh, state, viewRegion: state.regions[0], screen: 'game', actSplash: Number(q.act) as 2 | 3 })
       return
     }
     if (q.seed && q.region) {
       // Deterministic replay entry: ?seed=&region=
       const seed = /^\d+$/.test(q.seed) ? Number(q.seed) >>> 0 : seedFromString(q.seed)
-      set({ booted: true, fxHigh: q.fxHigh, state: createInitialState(seed, q.region), screen: 'game' })
+      set({ booted: true, fxHigh: q.fxHigh, state: createInitialState(seed, q.region), viewRegion: q.region, screen: 'game' })
       return
     }
     const save = await saveRepo.load().catch(() => null)
-    set({ booted: true, fxHigh: q.fxHigh, hasSave: Boolean(save) })
+    set({ booted: true, fxHigh: q.fxHigh, hasSave: Boolean(save?.state.v === 3) })
   },
 
   setLang(lang) {
@@ -97,11 +126,11 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   setScreen(screen) {
-    set({ screen, panel: null, summaryOpen: false })
+    set({ screen, panel: null, summaryOpen: false, placement: null, selectedPlantId: null })
   },
 
   setPanel(panel) {
-    set({ panel, lastRejection: null })
+    set({ panel, lastRejection: null, placement: null, selectedPlantId: null })
   },
 
   setHppOpen(open) {
@@ -114,6 +143,23 @@ export const useStore = create<Store>((set, get) => ({
 
   setMapOpen(open) {
     set({ mapOpen: open })
+  },
+
+  setViewRegion(region) {
+    const state = get().state
+    if (state?.regions.includes(region)) set({ viewRegion: region, placement: null, selectedPlantId: null, lastChange: null })
+  },
+
+  beginPlacement(buildable, region) {
+    set({ placement: { buildable, region }, viewRegion: region, selectedPlantId: null, panel: null, lastRejection: null })
+  },
+
+  cancelPlacement() {
+    set({ placement: null })
+  },
+
+  selectPlant(plantId) {
+    set({ selectedPlantId: plantId, placement: null })
   },
 
   closeSummary() {
@@ -131,20 +177,49 @@ export const useStore = create<Store>((set, get) => ({
   newGame(region) {
     const seed = (crypto.getRandomValues(new Uint32Array(1))[0]) >>> 0
     const state = createInitialState(seed, region)
-    set({ state, screen: 'game', lastRejection: null, panel: null, summaryOpen: false })
+    set({ state, screen: 'game', viewRegion: region, lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null })
     saveRepo.persist(state).catch(() => {})
   },
 
   async continueGame() {
     const save = await saveRepo.load().catch(() => null)
-    if (save) set({ state: save.state, screen: 'game', lastRejection: null, panel: null, summaryOpen: false })
+    if (save?.state.v === 3) set({ state: save.state, screen: 'game', viewRegion: save.state.regions[0], lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null })
   },
 
   dispatch(action) {
     const prev = get().state
     if (!prev) return
+    const actionRegion =
+      'region' in action
+        ? action.region
+        : action.type === 'demolish'
+          ? prev.plants.find((p) => p.id === action.plantId)?.region
+          : undefined
+    const region = actionRegion ?? get().viewRegion ?? prev.regions[0]
+    const beforeStats = cityStats(prev, region)
+    const beforeTrust = prev.regionState[region]?.trust ?? 0
     const { state, rejected } = reduce(prev, action)
-    set({ state, lastRejection: (rejected as StringKey) ?? null })
+    const afterStats = cityStats(state, region)
+    const afterTrust = state.regionState[region]?.trust ?? beforeTrust
+    const lastChange: LiveChange | null = rejected
+      ? get().lastChange
+      : {
+          id: state.log.length,
+          region,
+          kind: action.type,
+          money: state.money - prev.money,
+          trust: Math.round(afterTrust - beforeTrust),
+          jobs: afterStats.jobs - beforeStats.jobs,
+          happiness: afterStats.happiness - beforeStats.happiness,
+          coverage: afterStats.coverage - beforeStats.coverage,
+          population: afterStats.population - beforeStats.population,
+        }
+    set({
+      state,
+      lastRejection: (rejected as StringKey) ?? null,
+      lastChange,
+      selectedPlantId: !rejected && action.type === 'demolish' ? null : get().selectedPlantId,
+    })
     if (!rejected) {
       saveRepo.persist(state).catch(() => {}) // autosave EVERY turn
       if (action.type === 'endTurn') {

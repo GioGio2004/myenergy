@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useStore } from '../../store'
 import { BUILDABLE_TEXT, pick, t } from '../../engine/strings'
 import type { StringKey } from '../../engine/strings'
@@ -10,11 +9,10 @@ import { RegionTabs } from './RegionTabs'
 // Ladder order: everything is listed, later-act items visibly locked — the tree
 // IS the progression teaser. Disabled rows always show WHY (dev rules §4.4).
 const ORDER: BuildableId[] = [
-  'gig',
   'rooftop',
-  'gaspeaker',
   'commsolar',
   'turbine',
+  'gaspeaker',
   'battery',
   'solarfarm',
   'translink',
@@ -38,22 +36,16 @@ function whyDisabled(state: GameState, type: BuildableId, region: RegionId, key:
   return base
 }
 
-function Stars({ n }: { n: 1 | 2 | 3 }) {
-  return <span className="slot-stars">{'⭐'.repeat(n)}</span>
-}
-
 export function BuildPanel() {
-  const { lang, state, dispatch, setHppOpen } = useStore()
-  const [expanded, setExpanded] = useState<BuildableId | null>(null)
-  const [selRegion, setSelRegion] = useState<RegionId | null>(null)
+  const { lang, state, viewRegion, dispatch, setHppOpen, setViewRegion, beginPlacement } = useStore()
   if (!state) return null
-  const region = selRegion && state.regions.includes(selRegion) ? selRegion : state.regions[0]
+  const region = viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0]
   const rdef = D.regionById(region)
 
   return (
     <section className="panel">
       <h3 className="panel-title">🏗 {t('buildPanelTitle', lang)}</h3>
-      <RegionTabs value={region} onChange={(r) => { setSelRegion(r); setExpanded(null) }} />
+      <RegionTabs value={region} onChange={setViewRegion} />
       <div className="panel-list">
         {ORDER.map((id) => {
           const def = D.BUILDABLES[id]
@@ -62,18 +54,20 @@ export function BuildPanel() {
           // feasibility (money/water/track/slot) — the interstitial shows the rest.
           const rej = id === 'hpp' ? hppRejection(state, region, 'rush') : buildRejection(state, id, region)
           const cost = effectiveCost(state, id, region)
-          const open = expanded === id
           const isStorage = def.kind === 'storage'
           const underConstruction = state.plants.some((p) => p.type === id && p.turnsLeft > 0)
+          const matchingSites = def.slot ? rdef.slots.map((s, i) => ({ ...s, i })).filter((s) => s.type === def.slot) : []
+          const freeSites = matchingSites.filter((s) => !slotOccupied(state, region, s.i))
+          const starter = state.turn === 1 && state.plants.length === 0 && id === 'commsolar' && !rej
 
           return (
-            <div key={id} className={`build-row ${rej ? 'locked' : ''}`}>
+            <div key={id} className={`build-row ${rej ? 'locked' : ''} ${starter ? 'starter-choice' : ''}`}>
               <button
                 className="build-main"
                 onClick={() => {
                   if (rej) return
                   if (id === 'hpp') setHppOpen(true)
-                  else if (def.slot) setExpanded(open ? null : id)
+                  else if (def.slot) beginPlacement(id, region)
                   else dispatch({ type: 'build', buildable: id, region })
                 }}
                 disabled={Boolean(rej)}
@@ -82,6 +76,7 @@ export function BuildPanel() {
                 <span className="build-info">
                   <span className="build-name">
                     {pick(text.name, lang)}
+                    {starter && <em className="starter-badge">★ {t('startHere', lang)}</em>}
                     {underConstruction && <em className="build-tag"> {t('buildingLabel', lang)}</em>}
                   </span>
                   <span className="build-desc">{pick(text.desc, lang)}</span>
@@ -92,38 +87,15 @@ export function BuildPanel() {
                       ` · ${isStorage ? t('storesLabel', lang) : t('outputLabel', lang)} ${def.baseOutput} ${isStorage ? 'MWh' : t('mwhPerQuarter', lang)}`}
                     {def.upkeep > 0 && ` · ${t('upkeepLabel', lang)} ₾${Math.round(def.upkeep * def.share).toLocaleString()}`}
                   </span>
+                  {def.slot && !rej && (
+                    <span className="build-sites">
+                      ◉ {freeSites.length}/{matchingSites.length} {t('sitesAvailable', lang)}
+                    </span>
+                  )}
                   {rej && <span className="build-why">🔒 {whyDisabled(state, id, region, rej, lang)}</span>}
                 </span>
-                {!rej && <span className="build-cta">{def.slot ? '▾' : `+ ${t('buildNow', lang)}`}</span>}
+                {!rej && <span className="build-cta">{def.slot ? `⌖ ${t('placeOnMap', lang)}` : `+ ${t('buildNow', lang)}`}</span>}
               </button>
-
-              {open && def.slot && (
-                <div className="slot-list">
-                  <span className="slot-hint">{t('chooseSlot', lang)}:</span>
-                  {rdef.slots.map((s, i) => {
-                    if (s.type !== def.slot) return null
-                    const taken = slotOccupied(state, region, i)
-                    return (
-                      <button
-                        key={i}
-                        className="slot-row"
-                        disabled={taken}
-                        onClick={() => {
-                          dispatch({ type: 'build', buildable: id, region, slot: i })
-                          setExpanded(null)
-                        }}
-                      >
-                        <Stars n={s.stars} />
-                        <span className="slot-why">
-                          {lang === 'ka' ? s.whyKa : s.whyEn}
-                          {taken && ` — ${t('occupied', lang)}`}
-                        </span>
-                        <span className="slot-mult">×{D.SLOT_QUALITY_MULT[s.stars]}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
             </div>
           )
         })}

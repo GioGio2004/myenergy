@@ -12,10 +12,10 @@ export default defineConfig({
       manifest: {
         name: 'დენი — Energy Stewards of Georgia',
         short_name: 'დენი',
-        description: '₾10,000, ერთი რეგიონი — აანთე საქართველო და გახდი ევროპის მწვანე ბატარეა.',
+        description: 'ააშენე ცოცხალი ენერგო-ქალაქი, გაანათე საქართველო და შეამცირე იმპორტზე დამოკიდებულება.',
         lang: 'ka',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any',
         start_url: '/',
         background_color: '#1a1423',
         theme_color: '#f2a541',

@@ -12,6 +12,7 @@ import type {
   GameAction,
   GameOver,
   GameState,
+  CityStats,
   PlantInstance,
   ReduceResult,
   RegionId,
@@ -58,7 +59,7 @@ function initRegion(id: RegionId): RegionState {
 
 export function createInitialState(seed: number, region: RegionId): GameState {
   return {
-    v: 2,
+    v: 3,
     seed,
     rng: seed >>> 0,
     turn: 1,
@@ -137,6 +138,13 @@ export function effectiveCost(state: GameState, type: BuildableId, region: Regio
   return Math.round(cost)
 }
 
+export function demolitionCost(state: GameState, plantId: number): number {
+  const plant = state.plants.find((p) => p.id === plantId)
+  if (!plant) return 0
+  const rate = plant.turnsLeft > 0 ? D.DEMOLITION_CONSTRUCTION_RATE : D.DEMOLITION_COST_RATE
+  return Math.max(500, Math.round(effectiveCost(state, plant.type, plant.region) * rate))
+}
+
 function avgTrust(state: GameState): number {
   const ts = state.regions.map((r) => state.regionState[r]!.trust)
   return ts.reduce((a, b) => a + b, 0) / ts.length
@@ -178,23 +186,68 @@ export interface Forecast {
   contractVolume: number // committed export served before home demand
 }
 
-export function forecast(state: GameState): Forecast {
+export function forecast(state: GameState, region?: RegionId): Forecast {
   const season = seasonOf(state.turn)
+  // endTurn advances construction before resolving energy, so a one-quarter
+  // project is available in the coming result.
+  const comingPlants = state.plants.filter((p) => p.turnsLeft <= 1)
   let demand = 0
   let gen = 0
-  for (const r of state.regions) {
+  const regions = region && state.regions.includes(region) ? [region] : state.regions
+  for (const r of regions) {
     const rs = state.regionState[r]!
     const winterExtra = season === 'winter' ? D.WINTER_DEMAND_MULT * (D.REGION_WINTER_DEMAND_EXTRA[r] ?? 1) : 1
     demand += rs.demand * winterExtra
-    for (const p of builtPlants(state).filter((p) => p.region === r)) gen += plantOutput(state, p, season)
+    for (const p of comingPlants.filter((p) => p.region === r)) gen += plantOutput(state, p, season)
   }
+  const relevantPlants = comingPlants.filter((p) => !region || p.region === region)
+  const relevantStorage = relevantPlants
+    .filter((p) => D.BUILDABLES[p.type].kind === 'storage')
+    .reduce((sum, p) => sum + D.BUILDABLES[p.type].baseOutput, 0)
+  const hasRelevantPeaker = relevantPlants.some((p) => p.type === 'gaspeaker')
   return {
     demand,
     gen,
-    storageAvail: Math.min(state.storedMWh, storageCapacity(state)),
-    peakerAvail: state.gasOn && hasBuilt(state, 'gaspeaker') ? D.GAS_PEAKER_CAP : 0,
-    contractVolume: state.contract ? D.CONTRACTS[state.contract.customer].volume : 0,
+    storageAvail: Math.min(state.storedMWh, relevantStorage),
+    peakerAvail: state.gasOn && hasRelevantPeaker ? D.GAS_PEAKER_CAP : 0,
+    contractVolume: state.contract && (!region || region === state.regions[0]) ? D.CONTRACTS[state.contract.customer].volume : 0,
   }
+}
+
+/** Immediate, kid-readable feedback. This is deliberately a projection rather
+ * than a second simulation: quarterly resolution remains the source of truth. */
+export function cityStats(state: GameState, region: RegionId = state.regions[0]): CityStats {
+  const rs = state.regionState[region] ?? state.regionState[state.regions[0]]!
+  const f = forecast(state, region)
+  const need = Math.max(1, f.demand + f.contractVolume)
+  const supplied = f.gen + f.storageAvail + f.peakerAvail
+  const coverage = clamp(Math.round((supplied / need) * 100), 0, 100)
+  const cleanShare = clamp(Math.round((f.gen / need) * 100), 0, 100)
+  const regionPlants = state.plants.filter((p) => p.region === region)
+  const jobs =
+    D.BASE_JOBS +
+    regionPlants.reduce((sum, p) => sum + D.JOBS_BY_BUILDABLE[p.type] * (p.turnsLeft > 0 ? 1.35 : 1), 0) +
+    (rs.hiring ? D.LOCAL_HIRING_JOBS : 0)
+  const population =
+    D.BASE_POPULATION +
+    rs.prosperity * D.POPULATION_PER_PROSPERITY +
+    rs.coveredStreak * D.POPULATION_PER_COVERED_QUARTER
+  const recentBlackout = Boolean(state.lastReport?.blackoutRegions.includes(region))
+  const happiness = clamp(
+    Math.round(rs.trust * 0.55 + coverage * 0.3 + rs.prosperity * 4 + (rs.revshare ? D.REVENUE_SHARE_HAPPINESS : 0) - (recentBlackout ? 18 : 0)),
+    0,
+    100,
+  )
+  const built = state.plants.filter((p) => p.region === region && p.turnsLeft <= 1)
+  const upkeep = built.reduce((sum, p) => sum + D.BUILDABLES[p.type].upkeep * D.BUILDABLES[p.type].share, 0)
+  const weightedShare = f.gen > 0
+    ? built.reduce((sum, p) => sum + plantOutput(state, p, seasonOf(state.turn)) * D.BUILDABLES[p.type].share, 0) / f.gen
+    : 1
+  const policyMult = (rs.hiring ? 0.9 : 1) * (rs.revshare ? 0.85 : 1)
+  const projectedRevenue = Math.min(f.gen, need) * D.BASE_PRICE * 1000 * weightedShare * policyMult
+  const projectedNet = Math.round(projectedRevenue - upkeep)
+  const level = clamp(1 + rs.prosperity, 1, 5) as CityStats['level']
+  return { population: Math.round(population), jobs: Math.round(jobs), happiness, coverage, cleanShare, projectedRevenue: Math.round(projectedRevenue), projectedNet, level }
 }
 
 export function hppRejection(state: GameState, region: RegionId, choice: 'rush' | 'right'): string | null {
@@ -225,6 +278,8 @@ export function reduce(state: GameState, action: GameAction): ReduceResult {
       return build(state, action)
     case 'buildHpp':
       return buildHpp(state, action)
+    case 'demolish':
+      return demolish(state, action)
     case 'trustAction':
       return trustAction(state, action)
     case 'toggleGas':
@@ -238,6 +293,21 @@ export function reduce(state: GameState, action: GameAction): ReduceResult {
     case 'endTurn':
       return { state: endTurn(state, action) }
   }
+}
+
+function demolish(state: GameState, action: Extract<GameAction, { type: 'demolish' }>): ReduceResult {
+  const plant = state.plants.find((p) => p.id === action.plantId)
+  if (!plant) return { state, rejected: 'rejPlantMissing' }
+  if (
+    (state.contract?.customer === 'armenia' && plant.type === 'translink') ||
+    (state.contract?.customer === 'eu' && plant.type === 'cableshare')
+  ) return { state, rejected: 'rejContractAsset' }
+  const cost = demolitionCost(state, plant.id)
+  if (state.money < cost) return { state, rejected: 'rejDemolishMoney' }
+  const plants = state.plants.filter((p) => p.id !== plant.id)
+  const next = { ...state, plants, money: state.money - cost }
+  const storedMWh = Math.min(next.storedMWh, storageCapacity(next))
+  return log({ ...next, storedMWh }, action)
 }
 
 function log(state: GameState, action: GameAction): ReduceResult {

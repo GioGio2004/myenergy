@@ -28,3 +28,13 @@
 ## Roadmap (ideas parked tonight, per dev rules §9)
 - Region-switchable diorama tab (2nd region currently shown via world map only)
 - Local top-5 leaderboard on game-over (needs a read method — SaveRepo is frozen; AUTH adds it at merge)
+
+## V2 product reset — 2026-07-12
+
+- Retired the “Three.js is view-only” rule: construction plots and built assets are now direct interaction surfaces, with the pure reducer still validating every action.
+- Retired the global 560px shell: desktop is a real HUD/tool-rail/world layout; mobile keeps drawers and a thumb bar.
+- Kept deterministic quarterly economics. “Live” now means ambient city motion, immediate forecasts/deltas, and a future animated quarter resolution—not an always-running timer that punishes children while reading.
+- Replaced the ₾10k/gig grind with a ₾90k opening grant and hid gigs from the build catalog so the first meaningful energy placement occurs in under one minute.
+- Demolition is an educational decision, not an undo: 12% decommissioning cost (6% during construction), minimum ₾500, no original-investment refund.
+- Save/ruleset schema is v3. V1 saves are ignored rather than pretending their seed/action logs still replay after the opening-grant and land-rule changes.
+- The complete product rationale, benchmark research, acceptance bar, and next sprint live in `V2-PLAN.md`.

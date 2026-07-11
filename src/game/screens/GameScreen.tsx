@@ -12,22 +12,26 @@ import { NamakhvaniModal } from '../hud/NamakhvaniModal'
 import { ActSplash } from '../hud/ActSplash'
 import { ExpandModal } from '../hud/ExpandModal'
 import { ExportMapModal } from '../hud/ExportMapModal'
+import { PlacementBar } from '../hud/PlacementBar'
+import { AssetInspector } from '../hud/AssetInspector'
+import { CitizenReaction } from '../hud/CitizenReaction'
+import { FirstMissionCoach } from '../hud/FirstMissionCoach'
 import { DioramaView } from '../scene/DioramaView'
 import { EVENT_TEXT, pick, t } from '../../engine/strings'
 
 export function GameScreen() {
-  const { lang, state, panel, summaryOpen, hppOpen, actSplash, expandOpen, mapOpen, setPanel, setExpandOpen } =
+  const { lang, state, viewRegion, placement, selectedPlantId, panel, summaryOpen, hppOpen, actSplash, expandOpen, mapOpen, setExpandOpen } =
     useStore()
   if (!state) return null
-  const home = regionById(state.regions[0])
+  const active = regionById(viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0])
   const canExpand = state.act >= 2 && state.regions.length < 2 && !state.gameOver
   return (
     <div className="screen game-screen">
       <Hud />
       <main className="game-main">
-        <div className="diorama-stack" onClick={panel ? () => setPanel(null) : undefined}>
+        <div className="diorama-stack">
           <DioramaView />
-          <span className="diorama-label">{lang === 'ka' ? home.nameKa : home.nameEn}</span>
+          <span className="diorama-label">{lang === 'ka' ? active.nameKa : active.nameEn}</span>
           {state.effects.length > 0 && (
             <div className="effects-strip">
               {state.effects.map((e, i) => (
@@ -37,6 +41,10 @@ export function GameScreen() {
               ))}
             </div>
           )}
+          {!panel && !placement && !selectedPlantId && state.plants.length > 0 && (
+            <span className="scene-hint">⌖ {t('selectAssetHint', lang)}</span>
+          )}
+          <CitizenReaction />
         </div>
         {canExpand && !panel && (
           <button className="btn expand-banner" onClick={() => setExpandOpen(true)}>
@@ -46,6 +54,9 @@ export function GameScreen() {
         {panel === 'build' && <BuildPanel />}
         {panel === 'trust' && <TrustPanel />}
         {panel === 'market' && <MarketPanel />}
+        <PlacementBar />
+        <AssetInspector />
+        <FirstMissionCoach />
         <Toast />
       </main>
       <ActionBar />

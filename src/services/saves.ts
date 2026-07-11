@@ -69,13 +69,15 @@ export class CloudSaveRepo implements SaveRepo {
   async load(): Promise<SaveSlot | null> {
     return null // TODO(auth): Convex query when signed in
   }
-  async persist(_state: GameState): Promise<void> {
+  async persist(state: GameState): Promise<void> {
+    void state
     // TODO(auth): queue to outbox, flush on 'online'/visibilitychange
   }
   async listSnapshots(): Promise<SaveSlot[]> {
     return []
   }
-  async submitScore(_entry: ScoreEntry): Promise<void> {
+  async submitScore(entry: ScoreEntry): Promise<void> {
+    void entry
     // TODO(auth): Convex leaderboard mutation
   }
 }

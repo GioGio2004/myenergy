@@ -50,6 +50,7 @@ export type CustomerId = 'turkey' | 'armenia' | 'eu'
 export type GameAction =
   | { type: 'build'; buildable: BuildableId; region: RegionId; slot?: number }
   | { type: 'buildHpp'; region: RegionId; slot?: number; choice: 'rush' | 'right' }
+  | { type: 'demolish'; plantId: number }
   | { type: 'trustAction'; action: TrustActionId; region: RegionId }
   | { type: 'toggleGas'; on: boolean }
   | { type: 'setSurplusPolicy'; policy: 'store' | 'sell' }
@@ -112,8 +113,20 @@ export interface TurnReport {
   contractMissed: boolean
 }
 
+/** Read-only, immediately recalculated city feedback for the HUD and scene. */
+export interface CityStats {
+  population: number
+  jobs: number
+  happiness: number // 0-100
+  coverage: number // forecast supply / demand, 0-100
+  cleanShare: number // forecast renewable generation / demand, 0-100
+  projectedRevenue: number // approximate gross next-quarter revenue, GEL
+  projectedNet: number // approximate next-quarter operating result, GEL
+  level: 1 | 2 | 3 | 4 | 5
+}
+
 export interface GameState {
-  v: 2 // save schema version
+  v: 3 // V2 living-city ruleset; older saves are intentionally not replayed
   seed: number
   rng: number // current mulberry32 word — randomness lives IN state
   turn: number // 1-based quarter, ends at MAX_TURNS

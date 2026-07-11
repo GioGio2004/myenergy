@@ -3,21 +3,28 @@ import { useStore } from '../../store'
 import { TRUST_ACTION_TEXT, pick, t } from '../../engine/strings'
 import * as D from '../../engine/data'
 import type { RegionId, TrustActionId } from '../../engine/types'
+import { cityStats } from '../../engine/engine'
 import { RegionTabs } from './RegionTabs'
 
 const ORDER: TrustActionId[] = ['townhall', 'school', 'eia', 'hiring', 'revshare']
 
+function retentionPercent(multiplier: number) {
+  const percent = multiplier * 100
+  return Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)
+}
+
 export function TrustPanel() {
-  const { lang, state, dispatch } = useStore()
-  const [selRegion, setSelRegion] = useState<RegionId | null>(null)
+  const { lang, state, viewRegion, dispatch, setViewRegion } = useStore()
+  const [reviewing, setReviewing] = useState<TrustActionId | null>(null)
   if (!state) return null
-  const region = selRegion && state.regions.includes(selRegion) ? selRegion : state.regions[0]
+  const region: RegionId = viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0]
   const rs = state.regionState[region]!
+  const stats = cityStats(state, region)
 
   return (
     <section className="panel">
       <h3 className="panel-title">🤝 {t('trustPanelTitle', lang)}</h3>
-      <RegionTabs value={region} onChange={setSelRegion} />
+      <RegionTabs value={region} onChange={(id) => { setViewRegion(id); setReviewing(null) }} />
 
       <div className="trust-meter">
         <div className="trust-bar">
@@ -41,23 +48,50 @@ export function TrustPanel() {
           const why = done ? t('rejOnce', lang) : broke ? `${t('rejMoney', lang)} · ₾${def.cost.toLocaleString()}` : null
           const communityMult = def.community ? (D.REGION_COMMUNITY_MULT[region] ?? 1) : 1
           const gain = Math.round(def.trust * communityMult)
+          const permanent = id === 'hiring' || id === 'revshare'
+          const penalty = def.revenueMult ? Math.round((1 - def.revenueMult) * 100) : 0
+          const currentRetention = (rs.hiring ? 0.9 : 1) * (rs.revshare ? 0.85 : 1)
+          const afterRetention = currentRetention * (def.revenueMult ?? 1)
+          const baselineRevenue = stats.projectedRevenue
+          const estimatedLoss = Math.round(baselineRevenue * (penalty / 100))
+          const isReviewing = reviewing === id
+          const starter = state.turn === 1 && state.plants.length === 0 && rs.trust < 50 && id === 'school' && !why
           return (
             <button
               key={id}
-              className={`build-row build-main ${why ? 'locked' : ''}`}
+              className={`build-row build-main trust-decision ${why ? 'locked' : ''} ${isReviewing ? 'reviewing' : ''} ${starter ? 'starter-choice' : ''}`}
               disabled={Boolean(why)}
-              onClick={() => dispatch({ type: 'trustAction', action: id, region })}
+              onClick={() => {
+                if (permanent && !isReviewing) setReviewing(id)
+                else {
+                  dispatch({ type: 'trustAction', action: id, region })
+                  setReviewing(null)
+                }
+              }}
             >
               <span className="build-icon">{text.icon}</span>
               <span className="build-info">
-                <span className="build-name">{pick(text.name, lang)}</span>
+                <span className="build-name">{pick(text.name, lang)} {starter && <em className="starter-badge">★ {t('startHere', lang)}</em>}</span>
                 <span className="build-desc">{pick(text.desc, lang)}</span>
-                <span className="build-numbers">
-                  {def.cost > 0 ? `₾${def.cost.toLocaleString()} · ` : ''}+{gain} {t('trust', lang)}
+                <span className="impact-grid">
+                  <span className="impact-chip impact-now">
+                    <small>{t('impactNow', lang)}</small>
+                    <b>{def.cost > 0 ? `−₾${def.cost.toLocaleString()} · ` : ''}+{gain} {t('trust', lang)}</b>
+                    {id === 'hiring' && <em>+{D.LOCAL_HIRING_JOBS} {t('jobsLabel', lang)}</em>}
+                    {id === 'revshare' && <em>+{D.REVENUE_SHARE_HAPPINESS} {t('happinessLabel', lang)}</em>}
+                  </span>
+                  {permanent && (
+                    <span className="impact-chip impact-ongoing">
+                      <small>{t('impactOngoing', lang)}</small>
+                      <b>{t('revenueKeptLabel', lang)} {retentionPercent(currentRetention)}% → {retentionPercent(afterRetention)}%</b>
+                      <em>{baselineRevenue > 0 ? `${t('estimatedLossLabel', lang)} ≈ −₾${estimatedLoss.toLocaleString()}` : `−${penalty}% · ${t('noRevenueYet', lang)}`}</em>
+                    </span>
+                  )}
                 </span>
+                {permanent && <span className="permanent-badge">∞ {t('permanentLabel', lang)}</span>}
                 {why && <span className="build-why">🔒 {why}</span>}
               </span>
-              {!why && <span className="build-cta">+{gain}</span>}
+              {!why && <span className="build-cta">{permanent ? (isReviewing ? t('applyPolicy', lang) : t('confirmChoice', lang)) : `+${gain}`}</span>}
             </button>
           )
         })}

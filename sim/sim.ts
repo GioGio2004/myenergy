@@ -2,7 +2,7 @@
 // Red sim = fix before anything else; balance failures are fixed in data.ts.
 
 import { balancedCoastAware, gasCrutch, overExporter, randomLegal, rushHpp, solarOnly, type Bot } from '../src/engine/bots'
-import { createInitialState, reduce, setStrict } from '../src/engine/engine'
+import { createInitialState, demolitionCost, reduce, setStrict, storageCapacity } from '../src/engine/engine'
 import * as D from '../src/engine/data'
 import type { GameState, RegionId } from '../src/engine/types'
 
@@ -231,7 +231,45 @@ const t0 = performance.now()
     for (const a of st.state.log) replay = reduce(replay, a).state
     ok = replay.money === st.state.money && replay.turn === st.state.turn && replay.rng === st.state.rng
   }
-  target('7 determinism', ok, ok ? 'replay identical' : 'replay diverged')
+target('7 determinism', ok, ok ? 'replay identical' : 'replay diverged')
+}
+
+// ---- 8. V2 land + demolition: full plots reject, removal costs, storage clamps ----
+{
+  let state: GameState = { ...createInitialState(8000, 'kakheti'), money: 2_000_000 }
+  for (const slot of [0, 1, 2]) state = reduce(state, { type: 'build', buildable: 'commsolar', region: 'kakheti', slot }).state
+  const full = reduce(state, { type: 'build', buildable: 'commsolar', region: 'kakheti' })
+  const plant = state.plants[0]
+  const cost = demolitionCost(state, plant.id)
+  const beforeMoney = state.money
+  const removed = reduce(state, { type: 'demolish', plantId: plant.id })
+
+  let storageState: GameState = { ...removed.state, money: 2_000_000, trackMWh: 1_000 }
+  storageState = reduce(storageState, { type: 'build', buildable: 'solarfarm', region: 'kakheti', slot: plant.slot ?? 0 }).state
+  const batteryBuild = reduce(storageState, { type: 'build', buildable: 'battery', region: 'kakheti' })
+  storageState = batteryBuild.state
+  const battery = storageState.plants.find((p) => p.type === 'battery')
+  if (battery) storageState = { ...storageState, storedMWh: storageCapacity(storageState) }
+  const withoutBattery = battery ? reduce(storageState, { type: 'demolish', plantId: battery.id }).state : storageState
+  const contractState: GameState = {
+    ...createInitialState(8001, 'kakheti'),
+    act: 2,
+    money: 500_000,
+    plants: [{ id: 1, type: 'translink', region: 'kakheti', slot: null, turnsLeft: 0 }],
+    nextPlantId: 2,
+    contract: { customer: 'armenia', quartersLeft: 2, missed: 0 },
+  }
+  const protectedRoute = reduce(contractState, { type: 'demolish', plantId: 1 })
+
+  const ok =
+    full.rejected === 'rejNoSlot' &&
+    !removed.rejected &&
+    removed.state.money === beforeMoney - cost &&
+    !removed.state.plants.some((p) => p.id === plant.id) &&
+    Boolean(battery) &&
+    withoutBattery.storedMWh === storageCapacity(withoutBattery) &&
+    protectedRoute.rejected === 'rejContractAsset'
+  target('8 V2 land + demolition', ok, ok ? 'full land rejects; paid removal frees site; storage clamps' : `V2 invariant failed; battery=${batteryBuild.rejected ?? 'built'}`)
 }
 
 console.log(`\n${failures === 0 ? 'SIM GREEN' : `SIM RED — ${failures} target(s) failing`} (${((performance.now() - t0) / 1000).toFixed(1)}s, seeds=${SEEDS})`)

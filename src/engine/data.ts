@@ -12,7 +12,9 @@ import type {
 } from './types'
 
 // ------------------------------ §1 Global constants ------------------------------
-export const START_MONEY = 10000
+// V2 opening grant: the first meaningful clean-energy placement must happen in
+// under a minute. The old ₾10k start forced several turns of repetitive gigs.
+export const START_MONEY = 90000
 export const MAX_TURNS = 36
 export const BASE_PRICE = 0.3 // GEL/kWh → ×1000 = GEL/MWh
 export const WINTER_PRICE_MULT = 1.4
@@ -54,6 +56,32 @@ export const HPP_RUSH_CAPITAL_BURN = 0.3
 export const HPP_RUSH_TRUST_HIT = -15
 export const HPP_TRUST_BASE = 75
 export const MAX_BLACKOUT_STREAK = 3
+export const DEMOLITION_COST_RATE = 0.12
+export const DEMOLITION_CONSTRUCTION_RATE = 0.06
+
+// V2 living-city feedback. These are presentation-scale estimates, kept here so
+// the HUD, scene and action previews all tell the same deterministic story.
+export const BASE_POPULATION = 850
+export const POPULATION_PER_PROSPERITY = 420
+export const POPULATION_PER_COVERED_QUARTER = 55
+export const BASE_JOBS = 90
+export const LOCAL_HIRING_JOBS = 70
+export const REVENUE_SHARE_HAPPINESS = 5
+export const JOBS_BY_BUILDABLE: Record<BuildableId, number> = {
+  rooftop: 4,
+  gig: 0,
+  commsolar: 24,
+  turbine: 18,
+  gaspeaker: 16,
+  solarfarm: 65,
+  windfarm: 82,
+  battery: 20,
+  pumpedhydro: 70,
+  translink: 34,
+  hpp: 120,
+  offshore: 95,
+  cableshare: 40,
+}
 
 export const ACT1_COVERED_QUARTERS = 3 // meet 100% demand 3 consecutive quarters
 export const ACT2_SELF_COVER = 0.9 // both regions ≥90% self-covered…
@@ -203,14 +231,14 @@ export interface BuildableDef {
 
 export const BUILDABLES: Record<BuildableId, BuildableDef> = {
   // rooftop & gaspeaker sit in the village, not on siting slots (DECISIONS.md)
-  rooftop: { id: 'rooftop', act: 1, cost: 10000, share: 1, slot: null, kind: 'solar', baseOutput: 8, upkeep: 0 },
+  rooftop: { id: 'rooftop', act: 1, cost: 10000, share: 1, slot: null, kind: 'solar', baseOutput: 8, upkeep: 0, maxPerRegion: 6 },
   gig: { id: 'gig', act: 1, cost: GIG_COST, share: 1, slot: null, kind: 'infra', baseOutput: 0, upkeep: 0 },
   commsolar: { id: 'commsolar', act: 1, cost: 60000, share: 1, slot: 'field', kind: 'solar', baseOutput: 140, upkeep: 500, needsTrust: 50, trustOnBuild: 3 },
   turbine: { id: 'turbine', act: 1, cost: 120000, share: 1, slot: 'ridge', kind: 'wind', baseOutput: 320, upkeep: 1500, needsTrust: 55, needsWind: 6 },
   gaspeaker: { id: 'gaspeaker', act: 1, cost: 40000, share: 1, slot: null, kind: 'gas', baseOutput: GAS_PEAKER_CAP, upkeep: 800, maxPerRegion: 1 },
   solarfarm: { id: 'solarfarm', act: 1, cost: 300000, share: 0.6, slot: 'field', kind: 'solar', baseOutput: 1300, upkeep: 4000, needsTrust: 60, needsTrack: 500, ppaPrice: 0.28 },
   windfarm: { id: 'windfarm', act: 2, cost: 900000, share: 0.5, slot: 'ridge', kind: 'wind', baseOutput: 3800, upkeep: 12000, needsTrust: 65, needsWind: 7, needsTrack: 1500 },
-  battery: { id: 'battery', act: 1, cost: 150000, share: 1, slot: null, kind: 'storage', baseOutput: 250, upkeep: 1000, needsAnyFarm: true },
+  battery: { id: 'battery', act: 1, cost: 150000, share: 1, slot: null, kind: 'storage', baseOutput: 250, upkeep: 1000, needsAnyFarm: true, maxPerRegion: 2 },
   pumpedhydro: { id: 'pumpedhydro', act: 2, cost: 400000, share: 0.6, slot: 'river', kind: 'storage', baseOutput: 800, upkeep: 2500, needsWater: 7, needsTrust: 60 },
   translink: { id: 'translink', act: 2, cost: 250000, share: 0.7, slot: null, kind: 'infra', baseOutput: 0, upkeep: 2000, maxPerRegion: 1 },
   hpp: { id: 'hpp', act: 2, cost: 2000000, share: 0.25, slot: 'river', kind: 'hydro', baseOutput: 6500, upkeep: 15000, needsTrust: HPP_TRUST_BASE, needsWater: 7, needsTrack: 3000, buildTurns: 2 },

@@ -1,39 +1,51 @@
+import { useState } from 'react'
 import { useStore } from '../../store'
 import { t } from '../../engine/strings'
-import { REGIONS } from '../../engine/data'
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <span className="region-stat">
-      {label} <b>{value}</b>
-    </span>
-  )
-}
+import type { RegionId } from '../../engine/types'
+import { GeorgiaRegionMap, RegionResourcePreview } from '../map/GeorgiaRegionMap'
 
 export function RegionSelectScreen() {
   const { lang, setScreen, newGame } = useStore()
+  const [selected, setSelected] = useState<RegionId | null>(null)
+
   return (
-    <div className="screen region-screen">
-      <header className="region-header">
+    <div className="screen region-screen region-screen-v2">
+      <header className="region-header region-picker-header">
         <button className="btn btn-ghost" onClick={() => setScreen('title')}>
           ← {t('back', lang)}
         </button>
-        <h2>{t('chooseRegion', lang)}</h2>
+        <div>
+          <h2>{t('chooseRegion', lang)}</h2>
+          <p>{t('regionSelectLead', lang)}</p>
+        </div>
       </header>
-      <div className="region-list">
-        {REGIONS.map((r) => (
-          <button key={r.id} className="region-card" onClick={() => newGame(r.id)}>
-            <span className="region-name">{lang === 'ka' ? r.nameKa : r.nameEn}</span>
-            <span className="region-stats">
-              <Stat label={`☀ ${t('sun', lang)}`} value={r.sun} />
-              <Stat label={`💨 ${t('wind', lang)}`} value={r.wind} />
-              <Stat label={`🌊 ${t('water', lang)}`} value={r.water} />
-              {r.coast && <span className="region-stat">🏖 {t('coast', lang)}</span>}
-            </span>
-            <span className="region-quirk">{lang === 'ka' ? r.quirkKa : r.quirkEn}</span>
+
+      <main className="region-picker-layout">
+        <section className="region-picker-map-panel">
+          <GeorgiaRegionMap lang={lang} selected={selected} onSelect={setSelected} />
+        </section>
+
+        <aside className="region-picker-detail-panel">
+          {selected ? (
+            <RegionResourcePreview lang={lang} regionId={selected} />
+          ) : (
+            <div className="region-preview-empty" aria-live="polite">
+              <span aria-hidden="true">🗺️</span>
+              <h3>{t('regionPreviewEmptyTitle', lang)}</h3>
+              <p>{t('regionPreviewEmptyDesc', lang)}</p>
+            </div>
+          )}
+
+          <button
+            className="btn btn-primary region-start-btn"
+            type="button"
+            disabled={!selected}
+            onClick={() => selected && newGame(selected)}
+          >
+            {t('startInRegion', lang)} →
           </button>
-        ))}
-      </div>
+        </aside>
+      </main>
     </div>
   )
 }

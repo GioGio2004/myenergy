@@ -1,42 +1,65 @@
+import { useState } from 'react'
 import { useStore } from '../../store'
 import { t } from '../../engine/strings'
-import { REGIONS } from '../../engine/data'
+import type { RegionId } from '../../engine/types'
+import { GeorgiaRegionMap, RegionResourcePreview } from '../map/GeorgiaRegionMap'
 
-// Act II second-region picker. One expansion only (engine enforces).
+// Act II second-region picker. The player previews a real place on the same map
+// used at game start, then confirms; one expansion only (the engine enforces it).
 export function ExpandModal() {
-  const { lang, state, dispatch, setExpandOpen } = useStore()
+  const { lang, state, dispatch, setExpandOpen, setViewRegion } = useStore()
+  const [selected, setSelected] = useState<RegionId | null>(null)
   if (!state) return null
+
   const close = () => setExpandOpen(false)
+  const confirm = () => {
+    if (!selected) return
+    dispatch({ type: 'expandRegion', region: selected })
+    setViewRegion(selected)
+    close()
+  }
+
   return (
-    <div className="modal-backdrop" onClick={close}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3 className="modal-title">🗺️ {t('expandTitle', lang)}</h3>
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      onClick={close}
+      onKeyDown={(event) => event.key === 'Escape' && close()}
+    >
+      <div
+        className="modal-card expand-region-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expand-region-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 className="modal-title" id="expand-region-title">🗺️ {t('expandTitle', lang)}</h3>
         <p className="panel-note center">{t('expandHint', lang)}</p>
-        <div className="panel-list">
-          {REGIONS.filter((r) => !state.regions.includes(r.id)).map((r) => (
-            <button
-              key={r.id}
-              className="region-card"
-              onClick={() => {
-                dispatch({ type: 'expandRegion', region: r.id })
-                close()
-              }}
-            >
-              <span className="region-name">
-                {lang === 'ka' ? r.nameKa : r.nameEn} {r.coast && '🏖'}
-              </span>
-              <span className="region-stats">
-                <span className="region-stat">☀ {r.sun}</span>
-                <span className="region-stat">💨 {r.wind}</span>
-                <span className="region-stat">🌊 {r.water}</span>
-              </span>
-              <span className="region-quirk">{lang === 'ka' ? r.quirkKa : r.quirkEn}</span>
-            </button>
-          ))}
+
+        <GeorgiaRegionMap
+          lang={lang}
+          selected={selected}
+          onSelect={setSelected}
+          disabledRegions={state.regions}
+          compact
+        />
+
+        {selected ? (
+          <RegionResourcePreview lang={lang} regionId={selected} compact />
+        ) : (
+          <div className="region-preview-empty is-compact" aria-live="polite">
+            <h3>{t('regionPreviewEmptyTitle', lang)}</h3>
+          </div>
+        )}
+
+        <div className="expand-region-actions">
+          <button className="btn btn-ghost" type="button" onClick={close}>
+            {t('back', lang)}
+          </button>
+          <button className="btn btn-primary" type="button" disabled={!selected} onClick={confirm}>
+            {t('confirmExpansion', lang)} →
+          </button>
         </div>
-        <button className="btn btn-ghost" onClick={close}>
-          {t('back', lang)}
-        </button>
       </div>
     </div>
   )

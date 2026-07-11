@@ -34,7 +34,8 @@ export const MAT = {
   sea: new THREE.MeshToonMaterial({ color: 0x4f8aa8, transparent: true, opacity: 0.9 }),
   soil: toon(0x7a5f48),
   ghost: new THREE.MeshToonMaterial({ color: 0xd8cdb4, transparent: true, opacity: 0.45 }),
-  marker: new THREE.MeshBasicMaterial({ color: 0xf2a541, transparent: true, opacity: 0.35 }),
+  markerAvailable: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.82, side: THREE.DoubleSide }),
+  markerOccupied: new THREE.MeshBasicMaterial({ color: 0x9c98a8, transparent: true, opacity: 0.42, side: THREE.DoubleSide }),
 }
 
 // ---------- terrain ----------
@@ -255,8 +256,8 @@ export function makePylon(): THREE.Group {
   return g
 }
 
-export function makeSlotMarker(): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.4, 24), MAT.marker)
+export function makeSlotMarker(available = true): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.52, 28), available ? MAT.markerAvailable : MAT.markerOccupied)
   m.rotateX(-Math.PI / 2)
   return m
 }

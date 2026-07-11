@@ -57,3 +57,11 @@ The cut order (leaderboard → samegrelo → offshore → 2nd export customer �
 ## 10. Working with Claude
 
 Claude builds milestone by milestone (M0→M7, 03-ARCHITECTURE.md §9); each milestone ends as a WORKING game. Ambiguity → simplest option consistent with `docs/`, logged in `docs/DECISIONS.md`, keep moving. Humans review the milestone status lines and play-test on a phone while the next milestone runs.
+
+## 11. V2 addendum (supersedes conflicting V1 presentation rules)
+
+- The pure reducer, deterministic RNG, replay log, engine validation, Georgian-first copy, and keyless guest boot remain binding.
+- The Three.js scene is now an input surface for explicit construction plots and asset inspection. It may dispatch normal actions but never writes simulation state directly.
+- A lightweight cosmetic animation loop is allowed for citizens, traffic, turbines, construction, and energy flow. It must pause while hidden, respect reduced motion, and never mutate engine state.
+- Desktop at 1024/1366/1440 widths is a first-class test target alongside the 360px mobile floor.
+- V2 priority and acceptance criteria live in `V2-PLAN.md`; the old overnight cut order no longer blocks the user-requested V2 interaction work.

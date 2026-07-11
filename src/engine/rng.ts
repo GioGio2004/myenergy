@@ -3,7 +3,7 @@
 // stays immutable and every run is replayable from (seed, actionLog).
 
 export function rngNext(word: number): { value: number; next: number } {
-  let t = (word + 0x6d2b79f5) | 0
+  const t = (word + 0x6d2b79f5) | 0
   let x = Math.imul(t ^ (t >>> 15), 1 | t)
   x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x
   const value = ((x ^ (x >>> 14)) >>> 0) / 4294967296

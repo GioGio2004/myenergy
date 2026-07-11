@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import { Diorama } from './diorama'
+import { buildRejection } from '../../engine/engine'
 
-// React mount for the imperative diorama. One-way: store → syncScene(state).
-// The diorama is a view — all input stays in the DOM HUD (docs/03 §4).
+// React bridge for the imperative living-world scene. The engine remains the
+// authority; raycasted plot/asset clicks are translated into normal actions.
 export function DioramaView() {
   const ref = useRef<HTMLDivElement>(null)
   const fxHigh = useStore((s) => s.fxHigh)
@@ -11,11 +12,32 @@ export function DioramaView() {
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const diorama = new Diorama(el, fxHigh)
-    const initial = useStore.getState().state
-    if (initial) diorama.sync(initial)
+    const diorama = new Diorama(el, fxHigh, {
+      onSlotSelect(slot) {
+        const store = useStore.getState()
+        if (!store.state || !store.placement) return
+        const { buildable, region } = store.placement
+        if (buildRejection(store.state, buildable, region, slot)) return
+        store.dispatch({ type: 'build', buildable, region, slot })
+        store.cancelPlacement()
+      },
+      onPlantSelect(plantId) {
+        const store = useStore.getState()
+        store.setPanel(null)
+        store.selectPlant(plantId)
+      },
+    })
+    const sync = (store: ReturnType<typeof useStore.getState>) => {
+      if (!store.state) return
+      diorama.sync(store.state, {
+        region: store.viewRegion ?? store.state.regions[0],
+        placement: store.placement,
+        selectedPlantId: store.selectedPlantId,
+      })
+    }
+    sync(useStore.getState())
     const unsub = useStore.subscribe((s) => {
-      if (s.state) diorama.sync(s.state)
+      sync(s)
     })
     return () => {
       unsub()

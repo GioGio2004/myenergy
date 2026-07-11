@@ -8,10 +8,10 @@ import * as D from '../../engine/data'
 // The scripted Namakhvani interstitial — the demo centerpiece (docs/01 §7,
 // NEVER CUT). Rush = 65% protest, capital burns; Right = the trust gate.
 export function NamakhvaniModal() {
-  const { lang, state, dispatch, setHppOpen } = useStore()
+  const { lang, state, viewRegion, dispatch, setHppOpen } = useStore()
   const [outcome, setOutcome] = useState<'protest' | 'started' | null>(null)
   if (!state) return null
-  const region = state.regions[0]
+  const region = viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0]
   const rs = state.regionState[region]!
   const cost = effectiveCost(state, 'hpp', region)
   const needTrust = D.HPP_TRUST_BASE + (D.REGION_HPP_TRUST_EXTRA[region] ?? 0)
