@@ -7,7 +7,7 @@ These rules exist so two tracks (GAME + AUTH) ship one bug-free product overnigh
 
 | Zone | Owner |
 |---|---|
-| `src/engine/`, `src/scene/`, `src/ui/`, `sim/` | GAME track |
+| `src/engine/`, `src/game/` (screens/hud/scene), `sim/` | GAME track |
 | `src/auth/`, `convex/`, merge dialog, booth leaderboard screen | AUTH track |
 | `src/services/saves.ts` (the `SaveRepo` interface) | FROZEN after M0 — changing it requires both owners agreeing, in person |
 | `docs/` | anyone may append; nobody rewrites history mid-night |

@@ -73,11 +73,15 @@ CC0 GLBs from [poly.pizza](https://poly.pizza/search/Renewable%20Energy), [Kenne
     services/saves.ts  # SaveRepo interface + LocalSaveRepo(Dexie) + CloudSaveRepo(Convex)
     auth/            # AUTH TEAMMATE: ClerkProvider, onboarding, merge dialog
     store.ts         # zustand bridge: gameState + uiState
-    ui/              # React screens, HUD, panels, cards (DOM only)
-    scene/           # diorama.ts assets.ts effects.ts (imperative three; plan-B swappable)
+    game/            # ALL game-facing view code, mounted by the screen router
+      screens/       # React screens: Title, RegionSelect, Main, TurnResolution, Win…
+      hud/           # HUD, thumb action bar, panels, cards (DOM only)
+      scene/         # diorama.ts assets.ts effects.ts (imperative three; plan-B swappable)
     audio.ts main.tsx
   sim/sim.ts         # headless: npx tsx sim/sim.ts
 ```
+
+> v2.3 change (see docs/DECISIONS.md): former `src/ui/` + `src/scene/` are grouped under `src/game/` (screens/hud/scene). Ownership and all rules are unchanged — `src/game/` is GAME-track territory exactly as `src/ui/` + `src/scene/` were.
 
 ## 7. The 5 iron rules
 
