@@ -40,5 +40,11 @@ Judge seed: **20260712**, region **kartli** (bot expands to adjara for the cable
 ## Deploy
 `dist/` is a static PWA — drag onto Netlify/Vercel/GitHub Pages. **No env vars required** (guest-only mode is the demo mode). Clerk/Convex keys are optional AUTH-track upgrades.
 
+**LIVE (July 12):** https://deni-two.vercel.app (Vercel project `deni`, prod alias)
+- QR for judges: `~/Desktop/deni-qr.png` (900px, points at the URL above)
+- USB fallback: `~/Desktop/deni-dist-usb.zip` (18 files — unzip, `npx serve dist`)
+- Redeploy: `vercel deploy --prod --yes` from a folder containing the dist files
+- Verified headless from the deployed origin: SW precache populated, **offline reload mounts the app**, offline `?act=3` loads instantly (Act III, turn 18, Kartli), manifest `standalone` + 192/512/maskable icons (installable).
+
 ## Demo freeze
 60 min before demo: only `docs/` and `data.ts` commits (dev rules §2).
