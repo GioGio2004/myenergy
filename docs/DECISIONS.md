@@ -23,6 +23,8 @@
 - 2026-07-12 M6 · SFX are synthesized WebAudio tones (no audio assets, works offline); triggered by a store-diff subscription — engine untouched.
 - 2026-07-12 M7 · Score submit = nickname form on the game-over card via frozen saveRepo.submitScore; leaderboard DISPLAY stays AUTH-track (Convex booth screen) per contract — not re-implemented locally.
 
+- 2026-07-12 polish · Pre-demo pass: Cyrillic МВт→MW in fact cards; toast wraps at 360px (was nowrap-overflow on long KA rejections); win screen gets sunburst rays + grade pop + turns/CO₂ rows (existing string keys only). Judge mode rehearsed headless: act2 @ t16, act3 @ t18, replay identical. Sim + build green after every change.
+
 ## Roadmap (ideas parked tonight, per dev rules §9)
 - Region-switchable diorama tab (2nd region currently shown via world map only)
 - Local top-5 leaderboard on game-over (needs a read method — SaveRepo is frozen; AUTH adds it at merge)

@@ -317,7 +317,21 @@ button.build-row:disabled { cursor: not-allowed; }
 /* ---------- Game over ---------- */
 .gameover-card { text-align: center; }
 .gameover-reason { font-size: 14px; color: var(--cream-dim); }
-.grade { font-size: 64px; font-weight: 800; line-height: 1.1; margin: 6px auto; width: 110px; height: 110px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid; }
+.grade { position: relative; font-size: 64px; font-weight: 800; line-height: 1.1; margin: 6px auto; width: 110px; height: 110px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid; }
+.gameover-won .grade { animation: gradepop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes gradepop { from { transform: scale(0.3); opacity: 0; } }
+.gameover-won .grade::before {
+  content: '';
+  position: absolute;
+  inset: -26px;
+  z-index: -1;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(242, 165, 65, 0.28) 0 9deg, transparent 9deg 24deg);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 66%, #000 74%, transparent 98%);
+  mask-image: radial-gradient(closest-side, transparent 66%, #000 74%, transparent 98%);
+  animation: rays 16s linear infinite;
+}
+@keyframes rays { to { transform: rotate(1turn); } }
 .grade-S { color: var(--sun); border-color: var(--sun); text-shadow: 0 0 24px rgba(242,165,65,0.6); }
 .grade-A { color: #9ade7c; border-color: #9ade7c; }
 .grade-B { color: var(--sky); border-color: var(--sky); }
@@ -336,7 +350,9 @@ button.build-row:disabled { cursor: not-allowed; }
   padding: 9px 16px;
   font-size: 13px;
   z-index: 10;
-  white-space: nowrap;
+  max-width: calc(100% - 28px);
+  width: max-content;
+  text-align: center;
   animation: pop 0.15s ease;
 }
 

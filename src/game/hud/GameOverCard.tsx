@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../../store'
 import { t } from '../../engine/strings'
 import { saveRepo } from '../../services/saves'
+import { MAX_TURNS } from '../../engine/data'
 import type { StringKey } from '../../engine/strings'
 import type { GameOver } from '../../engine/types'
 
@@ -28,13 +29,23 @@ export function GameOverCard() {
   }
   return (
     <div className="modal-backdrop">
-      <div className="modal-card gameover-card">
+      <div className={`modal-card gameover-card${over.won ? ' gameover-won' : ''}`}>
         <h2 className="modal-title">{over.won ? `🏆 ${t('victoryTitle', lang)}` : `🌑 ${t('defeatTitle', lang)}`}</h2>
         <p className="gameover-reason">{t(REASON_KEY[over.reason], lang)}</p>
         <div className={`grade grade-${over.grade}`}>{over.grade}</div>
         <p className="panel-note center">
           {t('scoreLabel', lang)}: <b>{over.score.toLocaleString()}</b>
         </p>
+        <div className="sum-grid">
+          <div className="sum-row">
+            <span>{t('turn', lang)}</span>
+            <b>{state.turn}/{MAX_TURNS}</b>
+          </div>
+          <div className="sum-row good">
+            <span>{t('co2', lang)}</span>
+            <b>{Math.round(state.co2Avoided).toLocaleString()} t</b>
+          </div>
+        </div>
         {saved ? (
           <p className="panel-note center">✅ {t('scoreSaved', lang)}</p>
         ) : (
