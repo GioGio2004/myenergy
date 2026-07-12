@@ -54,7 +54,26 @@ function initRegion(id: RegionId): RegionState {
     hiring: false,
     revshare: false,
     blackouts: 0,
+    unrestStreak: 0,
   }
+}
+
+/** Shared happiness formula (0–100). Used by the HUD projection (cityStats) and by
+ *  quarter resolution so the mood the player SEES is the mood that has consequences.
+ *  servedFrac = energy served to the region by YOU / its demand. */
+export function moodScore(
+  trust: number,
+  servedFrac: number,
+  prosperity: number,
+  revshare: boolean,
+  blackout: boolean,
+): number {
+  const coverage = clamp(servedFrac * 100, 0, 100)
+  return clamp(
+    Math.round(trust * 0.55 + coverage * 0.3 + prosperity * 4 + (revshare ? D.REVENUE_SHARE_HAPPINESS : 0) - (blackout ? 18 : 0)),
+    0,
+    100,
+  )
 }
 
 export function createInitialState(seed: number, region: RegionId): GameState {
@@ -431,7 +450,8 @@ function trustAction(state: GameState, action: Extract<GameAction, { type: 'trus
 
 function expandRegion(state: GameState, action: Extract<GameAction, { type: 'expandRegion' }>): ReduceResult {
   if (state.act < 2) return { state, rejected: 'rejAct' }
-  if (state.regions.length >= 2) return { state, rejected: 'rejMax' }
+  // regions are uncapped from Act II — the player may unlock every region
+  if (state.regions.length >= D.REGIONS.length) return { state, rejected: 'rejMax' }
   if (state.regions.includes(action.region)) return { state, rejected: 'rejMax' }
   return log(
     {
@@ -477,6 +497,8 @@ function plantOutput(state: GameState, p: PlantInstance, season: Season): number
       break
     case 'hydro':
       mult = season === 'winter' ? (D.REGION_HYDRO_WINTER[p.region] ?? s.hydro) : s.hydro
+      // run-of-river has no reservoir → its winter output collapses further
+      if (season === 'winter' && def.runOfRiver) mult *= D.RUNOFRIVER_WINTER_MULT
       if (hasEffect(state, 'drought')) mult *= D.DROUGHT_HYDRO_MULT
       break
     case 'wind':
@@ -700,13 +722,26 @@ function endTurn(prev: GameState, action: GameAction): GameState {
     genRevenuePerMWh = priceAcc / totalGen
     shareMult = shareAcc / totalGen
   }
-  // regional hiring/revshare multipliers, weighted by served energy
+  // mood multiplier per region: an unhappy region's economy underperforms, so your
+  // revenue there drags. Computed from the mood the player sees (pre-decay trust +
+  // this quarter's actual service). This is what gives low happiness real teeth.
+  const moodMultByRegion: Partial<Record<RegionId, number>> = {}
+  for (const r of state.regions) {
+    const rr = res[r]!
+    const rs = state.regionState[r]!
+    const servedFrac = rr.demand > 0 ? rr.served / rr.demand : 1
+    const happy = moodScore(rs.trust, servedFrac, rs.prosperity, rs.revshare, rr.blackout)
+    moodMultByRegion[r] =
+      happy < D.UNREST_HAPPY_CRISIS ? D.UNREST_REVENUE_MULT_CRISIS : happy < D.UNREST_HAPPY_LOW ? D.UNREST_REVENUE_MULT : 1
+  }
+
+  // regional hiring/revshare/mood multipliers, weighted by served energy
   const totalServed = state.regions.reduce((s, r) => s + res[r]!.served, 0)
   let regionMult = 1
   if (totalServed > 0) {
     regionMult = state.regions.reduce((s, r) => {
       const rs = state.regionState[r]!
-      const m = (rs.hiring ? 0.9 : 1) * (rs.revshare ? 0.85 : 1)
+      const m = (rs.hiring ? 0.9 : 1) * (rs.revshare ? 0.85 : 1) * (moodMultByRegion[r] ?? 1)
       return s + (res[r]!.served / totalServed) * m
     }, 0)
   }
@@ -718,7 +753,10 @@ function endTurn(prev: GameState, action: GameAction): GameState {
   const fuelMult = hasEffect(state, 'gasspike') ? D.GASSPIKE_FUEL_MULT : 1
   const upkeep = builtPlants(state).reduce((s, p) => s + D.BUILDABLES[p.type].upkeep * D.BUILDABLES[p.type].share, 0)
   const fuel = gasUsed * D.GAS_COST_PER_MWH * fuelMult
-  let costs = upkeep + fuel
+  // import levy: you pay for leaning on the national grid, scaled by how hooked you
+  // already are — cheap early, costly once dependence is high (the real price of imports)
+  const importLevy = Math.round(fallbackUsed * D.FALLBACK_LEVY_PER_MWH * (state.dependence / 100))
+  let costs = upkeep + fuel + importLevy
   if (hasEffect(state, 'inspection')) costs += Math.max(0, money) * D.INSPECTION_MONEY_FRAC
   money = Math.round(money + revenue - costs + state.gigsPending)
 
@@ -737,18 +775,44 @@ function endTurn(prev: GameState, action: GameAction): GameState {
   // 7. Trust, prosperity, demand growth per region.
   const decayMult = hasEffect(state, 'elections') ? D.ELECTIONS_DECAY_MULT : 1
   const regionState: GameState['regionState'] = {}
+  const unrestRegions: RegionId[] = []
   for (const r of state.regions) {
     const rs = state.regionState[r]!
     const rr = res[r]!
+    const servedFrac = rr.demand > 0 ? rr.served / rr.demand : 1
+    const fallbackReliance = rr.demand > 0 ? rr.fallback / rr.demand : 0
+    const ownGen = rr.gen * genScale
     let trust = rs.trust - D.TRUST_DECAY * decayMult
+    // service quality: covering your people (cleanly) earns goodwill; leaning on the
+    // national grid erodes it — the feedback loop that punishes coasting.
+    if (servedFrac >= D.SELF_COVER_TARGET) {
+      trust += D.SELF_COVER_TRUST
+      if (ownGen >= rr.demand * D.SELF_COVER_TARGET) trust += D.CLEAN_COVER_TRUST_BONUS
+    } else {
+      trust += D.UNDERSERVE_TRUST_MAX * Math.min(1, fallbackReliance / D.FALLBACK_RELIANCE_REF)
+    }
     if (rr.blackout) trust += D.BLACKOUT_TRUST_HIT
     if (hasEffect(state, 'viral') && r === state.regions[0]) trust += D.VIRAL_TRUST
+    // mood consequences: crisis-low happiness compounds anger and, if sustained,
+    // drives an exodus (prosperity falls → population & demand shrink).
+    const happy = moodScore(clamp(trust, 0, 100), servedFrac, rs.prosperity, rs.revshare, rr.blackout)
+    let unrestStreak = rs.unrestStreak ?? 0
+    if (happy < D.UNREST_HAPPY_CRISIS) {
+      trust += D.UNREST_TRUST_EXTRA
+      unrestStreak += 1
+    } else {
+      unrestStreak = 0
+    }
+    if (happy < D.UNREST_HAPPY_LOW) unrestRegions.push(r)
     trust = clamp(trust, 0, 100)
     const fullyCovered = rr.served + 0.5 >= rr.demand
     let coveredStreak = fullyCovered ? rs.coveredStreak + 1 : 0
     let prosperity = rs.prosperity
     if (rr.blackout) prosperity = clamp(prosperity + D.BLACKOUT_PROSPERITY_HIT, 0, 5)
-    else if (coveredStreak >= D.PROSPERITY_STREAK) {
+    else if (unrestStreak >= D.UNREST_PROSPERITY_STREAK) {
+      prosperity = clamp(prosperity - 1, 0, 5) // people and investment leave
+      unrestStreak = 0
+    } else if (coveredStreak >= D.PROSPERITY_STREAK) {
       prosperity = clamp(prosperity + 1, 0, 5)
       coveredStreak = 0
     }
@@ -758,6 +822,7 @@ function endTurn(prev: GameState, action: GameAction): GameState {
       trust,
       prosperity,
       coveredStreak,
+      unrestStreak,
       demand: rs.demand * growth,
       blackouts: rs.blackouts + (rr.blackout ? 1 : 0),
     }
@@ -833,6 +898,8 @@ function endTurn(prev: GameState, action: GameAction): GameState {
       costs: Math.round(costs),
       event: draw.event,
       contractMissed,
+      unrestRegions,
+      importLevy,
     },
     gameOver: null,
   }

@@ -28,13 +28,29 @@ export const MAT = {
   treeTrunk: toon(0x6e4a2f),
   tree1: toon(0x4c7a3f),
   tree2: toon(0x6a994e),
-  rockDark: toon(0x6b5d52),
+  // Premium foliage ported from the Terrain reference: flat-shaded standard
+  // materials give crisp low-poly facets + soft roughness gradients (nicer than
+  // toon's hard cel bands for natural greenery). Dedicated mats so citizens etc.
+  // that reuse tree1/tree2 are untouched.
+  treeBark: new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.9, flatShading: true }),
+  // two tonal shades per crown type so the forest reads with depth, not one flat green
+  pine: new THREE.MeshStandardMaterial({ color: 0x2c5a34, roughness: 0.85, flatShading: true }),
+  pine2: new THREE.MeshStandardMaterial({ color: 0x37693c, roughness: 0.85, flatShading: true }),
+  treeRound: new THREE.MeshStandardMaterial({ color: 0x4a7a3c, roughness: 0.85, flatShading: true }),
+  treeRound2: new THREE.MeshStandardMaterial({ color: 0x5d8c46, roughness: 0.85, flatShading: true }),
+  rockDark: new THREE.MeshStandardMaterial({ color: 0x6b6258, roughness: 0.95, flatShading: true }),
+  rockLight: new THREE.MeshStandardMaterial({ color: 0x847c6e, roughness: 0.95, flatShading: true }), // rock→cream 0.25
+  // Premium village houses (ported from the DENI asset lab): flat-shaded standard to
+  // match the terrain. cream walls, terracotta roofs, bark trim, rock chimneys.
+  houseWall: new THREE.MeshStandardMaterial({ color: 0xf5e7c8, roughness: 0.9, flatShading: true }),
+  houseRoof: new THREE.MeshStandardMaterial({ color: 0xc4552f, roughness: 0.9, flatShading: true }),
   windowOn: new THREE.MeshBasicMaterial({ color: 0xffd97a }),
   windowOff: new THREE.MeshBasicMaterial({ color: 0x2a2138 }),
-  // depthWrite:false stops the transparent water table from z-fighting/shimmering
-  // against the terrain waterline as the camera orbits (bug: water texture lag).
-  water: new THREE.MeshToonMaterial({ color: 0x74a4bc, transparent: true, opacity: 0.82, depthWrite: false }),
-  sea: new THREE.MeshToonMaterial({ color: 0x4f8aa8, transparent: true, opacity: 0.9, depthWrite: false }),
+  // Glossy teal water: low roughness + a little metalness gives a sun glint, faint
+  // emissive keeps it reading as water in shade. depthWrite:false stops the
+  // transparent table from z-fighting/shimmering against the waterline on orbit.
+  water: new THREE.MeshStandardMaterial({ color: 0x2f8fa8, roughness: 0.16, metalness: 0.35, emissive: 0x0b3d47, emissiveIntensity: 0.35, transparent: true, opacity: 0.85, depthWrite: false }),
+  sea: new THREE.MeshStandardMaterial({ color: 0x2b7fa0, roughness: 0.12, metalness: 0.45, emissive: 0x0a3a48, emissiveIntensity: 0.35, transparent: true, opacity: 0.9, depthWrite: false }),
   soil: toon(0x7a5f48),
   ghost: new THREE.MeshToonMaterial({ color: 0xd8cdb4, transparent: true, opacity: 0.45 }),
   markerAvailable: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
@@ -99,6 +115,50 @@ export function getTerrainProfile(region: RegionDef): TerrainProfile {
   return { coast: region.coast, ...REGION_TERRAIN[region.id] }
 }
 
+// Deterministic 2D value-noise + fbm, ported from the Terrain reference. Used to
+// give the ground moisture-driven color variation and per-facet jitter so it reads
+// as a rich natural surface rather than three flat color bands.
+function makeNoise2D(seed: number) {
+  const s = (seed * 2654435761) >>> 0
+  const hash = (ix: number, iz: number) => {
+    let h = (ix * 374761393 + iz * 668265263 + s) | 0
+    h = Math.imul(h ^ (h >>> 13), 1274126177)
+    h ^= h >>> 16
+    return (h >>> 0) / 4294967296
+  }
+  const smooth = (t: number) => t * t * (3 - 2 * t)
+  return (x: number, z: number) => {
+    const ix = Math.floor(x)
+    const iz = Math.floor(z)
+    const fx = x - ix
+    const fz = z - iz
+    const a = hash(ix, iz)
+    const b = hash(ix + 1, iz)
+    const c = hash(ix, iz + 1)
+    const d = hash(ix + 1, iz + 1)
+    const u = smooth(fx)
+    const v = smooth(fz)
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v
+  }
+}
+
+function makeFbm(seed: number) {
+  const n = makeNoise2D(seed)
+  return (x: number, z: number, octaves = 4) => {
+    let amp = 0.5
+    let freq = 1
+    let sum = 0
+    let norm = 0
+    for (let i = 0; i < octaves; i++) {
+      sum += n(x * freq, z * freq) * amp
+      norm += amp
+      amp *= 0.5
+      freq *= 2.1
+    }
+    return sum / norm
+  }
+}
+
 export function terrainHeight(x: number, z: number, p: TerrainProfile, phase: number): number {
   // gentle rolling base (amplitude varies per region)
   let h = 0.22 + p.amp * Math.sin(x * 0.7 + phase) * Math.cos(z * 0.6 + phase * 1.7)
@@ -120,37 +180,70 @@ export function makeTerrain(region: RegionDef): THREE.Group {
   const phase = rngNext(seed).value * Math.PI * 2
   const profile = getTerrainProfile(region)
 
-  const geo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, 30, 30)
-  geo.rotateX(-Math.PI / 2)
-  const pos = geo.attributes.position
-  const colors = new Float32Array(pos.count * 3)
+  // Higher-res plane displaced by the region heightmap. Rendered as crisp
+  // low-poly facets: toNonIndexed() + one flat color per triangle + a flat-shaded
+  // MeshStandardMaterial (technique ported from the Terrain reference for a more
+  // premium ground than the old smooth toon shading).
+  const base = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, 48, 48)
+  base.rotateX(-Math.PI / 2)
+  const bp = base.attributes.position
+  for (let i = 0; i < bp.count; i++) {
+    bp.setY(i, terrainHeight(bp.getX(i), bp.getZ(i), profile, phase))
+  }
+  const geo = base.toNonIndexed()
+  base.dispose()
+
   // each region carries its own grass/rock/sand palette (set in REGION_TERRAIN)
   const grass = new THREE.Color(profile.grass)
   const rock = new THREE.Color(profile.rock)
   const sand = new THREE.Color(profile.sand)
+  const snow = new THREE.Color(0xeef2f6)
+  const moisture = makeFbm(seed + 202)
   const c = new THREE.Color()
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i)
-    const z = pos.getZ(i)
-    const h = terrainHeight(x, z, profile, phase)
-    pos.setY(i, h)
-    if (h > 1.0) c.copy(rock).lerp(grass, THREE.MathUtils.clamp(1.6 - h, 0, 1))
-    else if (h < 0.06) c.copy(sand)
-    else c.copy(grass).offsetHSL(0, 0, (rngNext((i * 2654435761) >>> 0).value - 0.5) * 0.03)
-    colors[i * 3] = c.r
-    colors[i * 3 + 1] = c.g
-    colors[i * 3 + 2] = c.b
+  const p = geo.attributes.position
+  const colors = new Float32Array(p.count * 3)
+  for (let f = 0; f < p.count; f += 3) {
+    // face centroid → one color for the whole triangle (flat facets)
+    const cx = (p.getX(f) + p.getX(f + 1) + p.getX(f + 2)) / 3
+    const cy = (p.getY(f) + p.getY(f + 1) + p.getY(f + 2)) / 3
+    const cz = (p.getZ(f) + p.getZ(f + 1) + p.getZ(f + 2)) / 3
+    const m = moisture(cx * 0.18 + 200, cz * 0.18 + 200, 3) // 0..1 wetness
+    const jitter = (moisture(cx * 1.4 + 400, cz * 1.4 + 400, 2) - 0.5) * 0.05
+    if (cy < 0.06) {
+      c.copy(sand)
+    } else if (cy < 1.0) {
+      // lush grassland: stays green everywhere — moisture only nudges hue/sat/
+      // lightness (wetter = deeper green, drier = a touch olive), never bald dirt.
+      c.copy(grass).offsetHSL((0.5 - m) * 0.03, (m - 0.5) * 0.12, (m - 0.5) * 0.05 + jitter)
+    } else if (cy < 1.7) {
+      // grass melting into rock up the slope
+      c.copy(grass).lerp(rock, THREE.MathUtils.clamp((cy - 1.0) / 0.7, 0, 1))
+      c.offsetHSL(0, 0, jitter)
+    } else {
+      // rocky peaks capped with snow (only the tall regions reach here)
+      c.copy(rock).lerp(snow, THREE.MathUtils.clamp((cy - 1.7) / 0.8, 0, 1))
+    }
+    for (let v = 0; v < 3; v++) {
+      colors[(f + v) * 3] = c.r
+      colors[(f + v) * 3 + 1] = c.g
+      colors[(f + v) * 3 + 2] = c.b
+    }
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
   geo.computeVertexNormals()
-  const terrain = new THREE.Mesh(geo, new THREE.MeshToonMaterial({ vertexColors: true }))
+  const terrain = new THREE.Mesh(
+    geo,
+    new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.94, metalness: 0.04 }),
+  )
   terrain.name = 'terrain'
+  terrain.receiveShadow = true
   g.add(terrain)
 
   // water table: fills the carved river bed (and the sea, on the coast).
   // renderOrder + depthWrite:false (on the material) keep it from shimmering
   // against the terrain waterline while the camera moves.
   const water = new THREE.Mesh(new THREE.PlaneGeometry(TERRAIN_SIZE - 0.02, TERRAIN_SIZE - 0.02), region.coast ? MAT.sea : MAT.water)
+  water.name = 'water'
   water.rotateX(-Math.PI / 2)
   water.position.y = -0.16
   water.renderOrder = 2
@@ -161,53 +254,174 @@ export function makeTerrain(region: RegionDef): THREE.Group {
   skirt.position.y = -1.3
   g.add(skirt)
 
-  // scattered trees on free land (deterministic per region)
+  // Forests: dense clustered tree cover (ported feel from the Terrain reference —
+  // stands + clearings via forest noise, climbing the slopes, pine-heavy up high),
+  // replacing the old sparse 14-tree scatter that read as empty.
+  const forest = makeFbm(seed + 303)
   let word = seed
-  for (let i = 0; i < 14; i++) {
+  let placed = 0
+  for (let i = 0; i < 1100 && placed < 90; i++) {
     const a = rngNext(word)
     const b = rngNext(a.next)
-    word = b.next
-    const x = (a.value - 0.5) * (TERRAIN_SIZE - 4)
-    const z = (b.value - 0.5) * (TERRAIN_SIZE - 4)
-    if (Math.abs(x - RIVER_X) < 1.2) continue // not in the river
-    if (region.coast && z > 3.8) continue // not in the sea
-    if (z > 0.1 && z < 1.6 && x > -3.8 && x < 2.4) continue // not on the road corridor
-    if (Math.hypot(x + 0.6, z + 0.6) < 2.7) continue // not inside the village core
+    const cc = rngNext(b.next)
+    word = cc.next
+    const x = (a.value - 0.5) * (TERRAIN_SIZE - 3)
+    const z = (b.value - 0.5) * (TERRAIN_SIZE - 3)
+    if (Math.abs(x - RIVER_X) < 1.1) continue // not in the river
+    if (region.coast && z > 3.6) continue // not in the sea
+    if (z > -0.5 && z < 2.05 && x > -3.95 && x < 2.5) continue // clear of the ring road + crown margin
+    if (Math.hypot(x + 0.6, z + 0.6) < 2.6) continue // not inside the village core
+    if (SLOT_POS.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 1.1)) continue // keep build pads clear
     const h = terrainHeight(x, z, profile, phase)
-    if (h < 0.1 || h > 1.2) continue
-    const tree = makeTree(i % 2 === 0)
+    if (h < 0.12 || h > 2.2) continue // off the water, off the snow line
+    // cluster into forest stands (with bare clearings) rather than even scatter
+    if (forest(x * 0.28 + 40, z * 0.28 + 40, 3) < 0.5) continue
+    // broadleaf (round) only lower down; ridges are pine
+    const round = h <= 1.0 && cc.value > 0.55
+    const tree = makeTree(round, a.value > 0.5)
     tree.position.set(x, h, z)
+    tree.rotation.y = cc.value * Math.PI * 2
     g.add(tree)
+    placed++
+  }
+
+  // Rocks on the high peaks (reference detail — breaks up bare mountain tops).
+  let rword = rngNext(seed + 777).next
+  let rocks = 0
+  for (let i = 0; i < 300 && rocks < 20; i++) {
+    const a = rngNext(rword)
+    const b = rngNext(a.next)
+    const cc = rngNext(b.next)
+    rword = cc.next
+    const x = (a.value - 0.5) * (TERRAIN_SIZE - 3)
+    const z = (b.value - 0.5) * (TERRAIN_SIZE - 3)
+    const h = terrainHeight(x, z, profile, phase)
+    if (h < 1.4) continue // peaks only
+    const rock = makeRock(rocks, 0.34 + cc.value * 0.28)
+    rock.position.set(x, h - 0.03, z)
+    rock.rotation.y = a.value * 6
+    g.add(rock)
+    rocks++
   }
   return g
 }
 
-export function makeTree(alt: boolean): THREE.Group {
+/** Two crown shapes ported from the Terrain reference: a tapered pine (cone) and
+ *  a rounded broadleaf (faceted icosahedron), both flat-shaded for the premium
+ *  low-poly look. `round` picks the broadleaf; `dark` picks the deeper of two
+ *  tonal shades so a forest reads with depth. */
+export function makeTree(round: boolean, dark = false): THREE.Group {
   const g = new THREE.Group()
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.3, 5), MAT.treeTrunk)
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.3, 5), MAT.treeBark)
   trunk.position.y = 0.15
-  const crown = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.75, 6), alt ? MAT.tree1 : MAT.tree2)
-  crown.position.y = 0.65
+  trunk.castShadow = true
+  const crownMat = round ? (dark ? MAT.treeRound : MAT.treeRound2) : (dark ? MAT.pine : MAT.pine2)
+  const crown = round
+    ? new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 0), crownMat)
+    : new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), crownMat)
+  crown.position.y = round ? 0.62 : 0.68
+  crown.castShadow = true
   g.add(trunk, crown)
-  const s = 0.8 + (alt ? 0.35 : 0)
+  const s = 0.8 + (round ? 0.35 : 0)
   g.scale.setScalar(s)
   return g
 }
 
-// ---------- buildings ----------
-export function makeHouse(withLight: boolean): THREE.Group {
+/** Low-poly boulder cluster for the high peaks (3 designs ported from the asset lab). */
+export function makeRock(variant: number, scale: number): THREE.Group {
   const g = new THREE.Group()
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.42, 0.5), MAT.wall)
-  base.position.y = 0.21
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.48, 0.34, 4), MAT.roof)
-  roof.position.y = 0.59
-  roof.rotation.y = Math.PI / 4
-  g.add(base, roof)
-  if (withLight) {
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.14), MAT.windowOn)
-    win.name = 'window'
-    win.position.set(0, 0.24, 0.251)
-    g.add(win)
+  const boulder = (geo: THREE.BufferGeometry, x: number, y: number, z: number, light: boolean, sq = 1, rot?: [number, number, number]) => {
+    const m = new THREE.Mesh(geo, light ? MAT.rockLight : MAT.rockDark)
+    m.position.set(x, y, z)
+    m.scale.set(1, sq, 1)
+    if (rot) m.rotation.set(rot[0], rot[1], rot[2])
+    m.castShadow = true
+    g.add(m)
+  }
+  const ico = (r: number) => new THREE.IcosahedronGeometry(r, 0)
+  const dod = (r: number) => new THREE.DodecahedronGeometry(r, 0)
+  switch (variant % 3) {
+    case 0: // monolith
+      boulder(ico(0.42), 0, 0.34, 0, false, 1.15, [0.2, 0.5, 0.1])
+      boulder(ico(0.26), -0.38, 0.2, 0.14, true, 1, [0, 1.2, 0.3])
+      boulder(ico(0.22), 0.36, 0.16, -0.1, false, 1, [0.4, 0.2, 0])
+      break
+    case 1: // scree
+      boulder(ico(0.28), 0, 0.22, 0, false, 1, [0.1, 0.8, 0.2])
+      ;[[-0.45, 0.25, 0.16, 1], [0.42, 0.3, 0.17, 0], [0.5, -0.25, 0.16, 1], [-0.3, -0.42, 0.18, 0], [0.05, 0.52, 0.16, 0], [-0.55, -0.1, 0.16, 1]].forEach(([x, z, r, l], i) =>
+        boulder(ico(r), x, r * 0.55, z, l === 1, 0.7, [0, i * 0.9, 0]),
+      )
+      break
+    default: // sheared (dodecahedra)
+      boulder(dod(0.36), 0, 0.3, 0, false, 1, [0.12, 0.4, 0.28])
+      boulder(dod(0.26), -0.3, 0.18, 0.2, true, 0.6, [0.3, 1.1, 0.5])
+      boulder(dod(0.22), 0.34, 0.14, -0.18, false, 0.55, [0.5, 0.2, 0.9])
+      break
+  }
+  g.scale.setScalar(scale)
+  return g
+}
+
+// ---------- buildings ----------
+// Three Georgian-cottage designs (ported from the DENI asset lab). The lit-window
+// PANE is named 'window' so the diorama's blackout toggle can still darken it.
+export function makeHouse(withLight: boolean, variant = 0): THREE.Group {
+  const g = new THREE.Group()
+  const box = (w: number, h: number, d: number, mat: THREE.Material, x: number, y: number, z: number, rot?: [number, number, number]) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
+    m.position.set(x, y, z)
+    if (rot) m.rotation.set(rot[0], rot[1], rot[2])
+    m.castShadow = true
+    g.add(m)
+    return m
+  }
+  const roofCone = (h: number, y: number) => {
+    const r = new THREE.Mesh(new THREE.ConeGeometry(0.48, h, 4), MAT.houseRoof)
+    r.position.y = y + h / 2
+    r.rotation.y = Math.PI / 4
+    r.castShadow = true
+    g.add(r)
+  }
+  const chimney = (x: number, y: number) => {
+    box(0.09, 0.22, 0.09, MAT.rockDark, x, y, -0.1)
+    box(0.12, 0.04, 0.12, MAT.chimney, x, y + 0.13, -0.1)
+  }
+  const litWindow = (x: number, y: number, z: number) => {
+    box(0.14, 0.16, 0.02, MAT.treeBark, x, y, z) // frame
+    const pane = box(0.1, 0.12, 0.02, withLight ? MAT.windowOn : MAT.windowOff, x, y, z + 0.006)
+    pane.name = 'window'
+  }
+  // shared walls
+  box(0.6, 0.42, 0.5, MAT.houseWall, 0, 0.21, 0)
+  switch (variant % 3) {
+    case 0: // steep
+      roofCone(0.46, 0.42)
+      chimney(0.17, 0.66)
+      box(0.13, 0.24, 0.02, MAT.treeBark, -0.14, 0.12, 0.251) // door
+      litWindow(0.15, 0.24, 0.251)
+      break
+    case 1: // porch
+      roofCone(0.26, 0.42)
+      box(0.13, 0.24, 0.02, MAT.treeBark, 0, 0.12, 0.251) // door
+      litWindow(0.19, 0.26, 0.251)
+      box(0.5, 0.05, 0.22, MAT.treeBark, 0, 0.025, 0.36) // deck
+      box(0.54, 0.03, 0.26, MAT.houseRoof, 0, 0.4, 0.37, [0.28, 0, 0]) // awning
+      for (const s of [-1, 1]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.34, 5), MAT.treeBark)
+        post.position.set(s * 0.21, 0.21, 0.44)
+        post.castShadow = true
+        g.add(post)
+      }
+      break
+    default: // lean-to
+      roofCone(0.34, 0.42)
+      chimney(-0.15, 0.62)
+      box(0.13, 0.24, 0.02, MAT.treeBark, 0.16, 0.12, 0.251) // door
+      litWindow(-0.14, 0.26, 0.251)
+      box(0.24, 0.26, 0.34, MAT.houseWall, 0.42, 0.13, 0) // annex
+      box(0.3, 0.03, 0.38, MAT.houseRoof, 0.42, 0.29, 0, [0, 0, -0.32]) // annex roof
+      litWindow(0.42, 0.14, 0.171)
+      break
   }
   return g
 }
@@ -313,4 +527,41 @@ export function makeSlotMarker(available = true): THREE.Group {
   ring.position.y = 0.002
   g.add(fill, ring)
   return g
+}
+
+// ---------- sky ----------
+const SKY_RADIUS = 60
+
+/** A large inward-facing dome behind the whole diorama. Vertex-colored with a
+ *  zenith→horizon gradient (repainted per season) so the backdrop reads as real
+ *  sky instead of a flat fill; fog blends the scene into its horizon band. */
+export function makeSkyDome(): THREE.Mesh {
+  const geo = new THREE.SphereGeometry(SKY_RADIUS, 24, 16)
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }),
+  )
+  mesh.name = 'sky'
+  mesh.renderOrder = -1
+  return mesh
+}
+
+/** Repaint the dome gradient. `horizon` should match the scene fog color so the
+ *  ground fades seamlessly into the sky. */
+export function paintSky(mesh: THREE.Mesh, zenith: number, horizon: number): void {
+  const geo = mesh.geometry as THREE.SphereGeometry
+  const pos = geo.attributes.position
+  const zc = new THREE.Color(zenith)
+  const hc = new THREE.Color(horizon)
+  const c = new THREE.Color()
+  const colors = new Float32Array(pos.count * 3)
+  for (let i = 0; i < pos.count; i++) {
+    // y ∈ [-R, R] → 0..1, eased so the horizon band stays tight near the ground
+    const t = THREE.MathUtils.clamp(pos.getY(i) / SKY_RADIUS, -1, 1) * 0.5 + 0.5
+    c.copy(hc).lerp(zc, Math.pow(t, 0.55))
+    colors[i * 3] = c.r
+    colors[i * 3 + 1] = c.g
+    colors[i * 3 + 2] = c.b
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 }

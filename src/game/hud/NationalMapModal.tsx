@@ -12,7 +12,7 @@ export function NationalMapModal() {
   const { lang, state, viewRegion, setNationalMapOpen, setViewRegion, setExpandOpen } = useStore()
   if (!state) return null
 
-  const canExpand = state.act >= 2 && state.regions.length < 2 && !state.gameOver
+  const canExpand = state.act >= 2 && state.regions.length < REGIONS.length && !state.gameOver
   const unlocked = new Set<RegionId>(state.regions)
   // Locked regions are only tappable when an expansion is actually available.
   const disabledRegions = canExpand ? [] : REGIONS.map((r) => r.id).filter((id) => !unlocked.has(id))

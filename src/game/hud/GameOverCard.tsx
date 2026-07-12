@@ -27,9 +27,25 @@ export function GameOverCard() {
       .catch(() => {})
     setSaved(true)
   }
+  const confettiColors = ['#f2a541', '#2f8fa8', '#77e38b', '#f5e7c8', '#c4552f', '#4dd0e1']
   return (
     <div className="modal-backdrop">
       <div className={`modal-card gameover-card${over.won ? ' gameover-won' : ''}`}>
+        {over.won && (
+          <div className="confetti" aria-hidden="true">
+            {Array.from({ length: 44 }, (_, i) => (
+              <i
+                key={i}
+                style={{
+                  left: `${(i * 2.27) % 100}%`,
+                  background: confettiColors[i % confettiColors.length],
+                  animationDelay: `${(i % 11) * 0.18}s`,
+                  animationDuration: `${1.9 + (i % 5) * 0.35}s`,
+                }}
+              />
+            ))}
+          </div>
+        )}
         <h2 className="modal-title">{over.won ? `🏆 ${t('victoryTitle', lang)}` : `🌑 ${t('defeatTitle', lang)}`}</h2>
         <p className="gameover-reason">{t(REASON_KEY[over.reason], lang)}</p>
         <div className={`grade grade-${over.grade}`}>{over.grade}</div>

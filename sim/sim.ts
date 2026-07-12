@@ -114,9 +114,14 @@ const t0 = performance.now()
   )
 }
 
-// ---- 2. Gas-crutch bot: survives, Dependence >70, grade ≤B, spikes bite ≥25% ----
+// ---- 2. Gas-crutch trap: now DEADLIER by design (service-quality + mood + import
+//        levy make gas-reliance collapse, not just limp). It must still be a real
+//        trap — always high Dependence, never above grade B — but a big share of
+//        runs now fail outright instead of coasting to turn 36. We assert the trap
+//        collapses a meaningful fraction (≥40%) while never rewarding it. ----
 {
   let survived = 0
+  let collapsed = 0
   let depHigh = 0
   let gradeLeB = 0
   let spikeBite = 0
@@ -126,6 +131,7 @@ const t0 = performance.now()
     const st = runGame(2000 + s, 'kakheti', gasCrutch)
     const go = st.state.gameOver!
     if (go.reason === 'maxTurns' || go.won) survived++
+    if (!go.won && go.reason !== 'maxTurns') collapsed++
     if (st.state.dependence > 70) depHigh++
     if (go.grade !== 'S' && go.grade !== 'A') gradeLeB++
     if (st.sawSpike) {
@@ -136,9 +142,9 @@ const t0 = performance.now()
     }
   }
   target(
-    '2 gas-crutch trap',
-    survived / N >= 0.6 && depHigh / N >= 0.9 && gradeLeB / N >= 0.95 && (sawSpike === 0 || spikeBite / sawSpike >= 0.5),
-    `survive:${pct(survived, N)} dep>70:${pct(depHigh, N)} ≤B:${pct(gradeLeB, N)} spikeBite:${pct(spikeBite, sawSpike)}`,
+    '2 gas-crutch trap (deadlier)',
+    collapsed / N >= 0.4 && depHigh / N >= 0.9 && gradeLeB / N >= 0.95 && (sawSpike === 0 || spikeBite / sawSpike >= 0.5),
+    `collapse:${pct(collapsed, N)} survive:${pct(survived, N)} dep>70:${pct(depHigh, N)} ≤B:${pct(gradeLeB, N)} spikeBite:${pct(spikeBite, sawSpike)}`,
   )
 }
 

@@ -11,11 +11,13 @@ import { RegionTabs } from './RegionTabs'
 const ORDER: BuildableId[] = [
   'rooftop',
   'commsolar',
+  'smallhydro',
   'turbine',
   'gaspeaker',
   'battery',
   'solarfarm',
   'translink',
+  'mediumhydro',
   'pumpedhydro',
   'windfarm',
   'hpp',

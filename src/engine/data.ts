@@ -25,6 +25,34 @@ export const GAS_COST_PER_MWH = 220 // GEL — your peaker fuel
 export const GAS_CO2_PER_MWH = 0.45
 export const BLACKOUT_TRUST_HIT = -8
 export const BLACKOUT_PROSPERITY_HIT = -1
+
+// ---- Service quality → trust (the missing feedback loop) --------------------
+// Serving your people with your OWN generation earns goodwill; leaning on the
+// national grid (imported gas) quietly erodes it. This is what makes "build one
+// panel and coast" slowly fail: low self-coverage bleeds trust faster than the
+// flat decay, while genuinely covering demand rewards you.
+export const SELF_COVER_TARGET = 0.85 // served-by-you / demand to earn goodwill
+export const SELF_COVER_TRUST = 3 // trust gained when you clear the target
+export const CLEAN_COVER_TRUST_BONUS = 2 // extra if that coverage is clean, not peaker gas
+export const UNDERSERVE_TRUST_MAX = -3.5 // max trust lost when you barely self-serve
+export const FALLBACK_RELIANCE_REF = 0.5 // fallback/demand at which the erosion maxes out
+
+// ---- Mood consequences (unhappy citizens actually bite) ---------------------
+// Happiness is no longer cosmetic. An unhappy region's economy underperforms
+// (revenue drag), anger compounds (extra trust loss), and if neglect persists,
+// people and investment leave (prosperity falls → population & demand shrink).
+export const UNREST_HAPPY_LOW = 42 // below this: businesses pull back
+export const UNREST_HAPPY_CRISIS = 26 // below this: real unrest
+export const UNREST_REVENUE_MULT = 0.92 // revenue × this in an unhappy region
+export const UNREST_REVENUE_MULT_CRISIS = 0.8 // …and worse in crisis
+export const UNREST_TRUST_EXTRA = -2 // crisis anger compounds trust loss
+export const UNREST_PROSPERITY_STREAK = 4 // crisis quarters in a row → −1 prosperity (exodus)
+
+// ---- Import levy (leaning on the national grid isn't free) ------------------
+// You pay a share of the imported-gas bill for what the national fallback covers,
+// scaled by how import-dependent you already are — cheap early, punishing once
+// you're hooked. Teaches the real cost of dependence; rewards building your own.
+export const FALLBACK_LEVY_PER_MWH = 35 // GEL/MWh × (dependence/100)
 // Dependence = smoothed imported-gas share of demand: it converges toward the
 // quarter's actual gas share (your peaker + national fallback). The ±6/−3 step
 // model in docs/02 §1 could not reach the cable gate (<40) inside 36 turns from
@@ -71,6 +99,8 @@ export const JOBS_BY_BUILDABLE: Record<BuildableId, number> = {
   rooftop: 4,
   gig: 0,
   commsolar: 24,
+  smallhydro: 40,
+  mediumhydro: 85,
   turbine: 18,
   gaspeaker: 16,
   solarfarm: 65,
@@ -187,7 +217,7 @@ export const REGIONS: RegionDef[] = [
   { id: 'imereti', nameKa: 'იმერეთი', nameEn: 'Imereti', sun: 5, wind: 4, water: 8, coast: false, baseTrust: 45, demandStart: 700, quirkKa: 'ჰესს +10 ნდობა სჭირდება (ნამახვანი)', quirkEn: 'hydro needs +10 trust (Namakhvani)', slots: regionSlots(5, 4, 8, false) },
   { id: 'racha', nameKa: 'რაჭა', nameEn: 'Racha', sun: 4, wind: 3, water: 9, coast: false, baseTrust: 40, demandStart: 350, quirkKa: 'ჰესს +10 ნდობა; სათემო ქმედებები ×1.5', quirkEn: 'hydro +10 trust; community actions ×1.5', slots: regionSlots(4, 3, 9, false) },
   { id: 'adjara', nameKa: 'აჭარა', nameEn: 'Adjara', sun: 4, wind: 5, water: 7, coast: true, baseTrust: 50, demandStart: 600, quirkKa: 'მზე −10%; კაბელის ნაპირი', quirkEn: 'solar −10%; cable landing', slots: regionSlots(4, 5, 7, true) },
-  { id: 'samegrelo', nameKa: 'სამეგრელო', nameEn: 'Samegrelo', sun: 3, wind: 5, water: 8, coast: true, baseTrust: 55, demandStart: 620, quirkKa: 'მზის ხაფანგი — ღრუბლიანი', quirkEn: 'the solar trap — cloudy', slots: regionSlots(3, 5, 8, true) },
+  { id: 'samegrelo', nameKa: 'სამეგრელო-ზემო სვანეთი ', nameEn: 'Samegrelo-Zemo Svaneti', sun: 3, wind: 5, water: 8, coast: true, baseTrust: 55, demandStart: 620, quirkKa: 'მზის ხაფანგი — ღრუბლიანი', quirkEn: 'the solar trap — cloudy', slots: regionSlots(3, 5, 8, true) },
 ]
 
 export function regionById(id: RegionId): RegionDef {
@@ -227,16 +257,27 @@ export interface BuildableDef {
   buildTurns?: number
   trustOnBuild?: number
   maxPerRegion?: number
+  runOfRiver?: boolean // no reservoir → extra winter collapse (the real Georgian import driver)
 }
+
+// Run-of-river plants have no storage reservoir, so their winter output collapses
+// further than a regulated dam's — this is *why* Georgia imports power each winter.
+export const RUNOFRIVER_WINTER_MULT = 0.5
 
 export const BUILDABLES: Record<BuildableId, BuildableDef> = {
   // rooftop & gaspeaker sit in the village, not on siting slots (DECISIONS.md)
   rooftop: { id: 'rooftop', act: 1, cost: 10000, share: 1, slot: null, kind: 'solar', baseOutput: 8, upkeep: 0, maxPerRegion: 6 },
   gig: { id: 'gig', act: 1, cost: GIG_COST, share: 1, slot: null, kind: 'infra', baseOutput: 0, upkeep: 0 },
   commsolar: { id: 'commsolar', act: 1, cost: 60000, share: 1, slot: 'field', kind: 'solar', baseOutput: 140, upkeep: 500, needsTrust: 50, trustOnBuild: 3 },
+  // Small run-of-river HES — every region has a stream (river site), so it's the
+  // universal clean starter. Cheap & fully yours, but no reservoir → dies in winter.
+  smallhydro: { id: 'smallhydro', act: 1, cost: 85000, share: 1, slot: 'river', kind: 'hydro', baseOutput: 380, upkeep: 900, runOfRiver: true, maxPerRegion: 2 },
   turbine: { id: 'turbine', act: 1, cost: 120000, share: 1, slot: 'ridge', kind: 'wind', baseOutput: 320, upkeep: 1500, needsTrust: 55, needsWind: 6 },
   gaspeaker: { id: 'gaspeaker', act: 1, cost: 40000, share: 1, slot: null, kind: 'gas', baseOutput: GAS_PEAKER_CAP, upkeep: 800, maxPerRegion: 1 },
   solarfarm: { id: 'solarfarm', act: 1, cost: 300000, share: 0.6, slot: 'field', kind: 'solar', baseOutput: 1300, upkeep: 4000, needsTrust: 60, needsTrack: 500, ppaPrice: 0.28 },
+  // Medium regulated HES — only where the rivers are genuinely strong (water ≥ 6:
+  // Imereti, Racha, Adjara, Samegrelo). Bigger and steadier through winter than run-of-river.
+  mediumhydro: { id: 'mediumhydro', act: 2, cost: 450000, share: 0.6, slot: 'river', kind: 'hydro', baseOutput: 2200, upkeep: 5500, needsTrust: 60, needsWater: 6, needsTrack: 1500 },
   windfarm: { id: 'windfarm', act: 2, cost: 900000, share: 0.5, slot: 'ridge', kind: 'wind', baseOutput: 3800, upkeep: 12000, needsTrust: 65, needsWind: 7, needsTrack: 1500 },
   battery: { id: 'battery', act: 1, cost: 150000, share: 1, slot: null, kind: 'storage', baseOutput: 250, upkeep: 1000, needsAnyFarm: true, maxPerRegion: 2 },
   pumpedhydro: { id: 'pumpedhydro', act: 2, cost: 400000, share: 0.6, slot: 'river', kind: 'storage', baseOutput: 800, upkeep: 2500, needsWater: 7, needsTrust: 60 },

@@ -137,6 +137,8 @@ const S = {
   costsLabel: { ka: 'ხარჯები', en: 'Costs' },
   netLabel: { ka: 'სუფთა შედეგი', en: 'Net' },
   contractMissedLabel: { ka: 'კონტრაქტი ჩაიშალა — ჯარიმა!', en: 'Contract missed — penalty!' },
+  importLevyLabel: { ka: 'იმპორტის მოსაკრებელი', en: 'Import levy' },
+  unrestLabel: { ka: 'უკმაყოფილო მოსახლეობა — შემოსავალი და ნდობა ეცემა:', en: 'Unhappy citizens — revenue & trust falling in:' },
   coveredStreakLabel: { ka: 'ზედიზედ დაფარული კვარტალი', en: 'covered quarters in a row' },
   eventLabel: { ka: 'მოვლენა', en: 'Event' },
   continueLabel: { ka: 'გაგრძელება', en: 'Continue' },
@@ -335,6 +337,16 @@ export const BUILDABLE_TEXT: Record<BuildableId, { name: Entry; desc: Entry; ico
     icon: '☀️',
     name: { ka: 'სათემო მზის სადგური', en: 'Community solar' },
     desc: { ka: 'თემთან ერთად აშენებული — +3 ნდობა.', en: 'Built with the community — +3 trust.' },
+  },
+  smallhydro: {
+    icon: '💧',
+    name: { ka: 'პატარა ჰესი', en: 'Small HES (run-of-river)' },
+    desc: { ka: 'ყველა რეგიონში — იაფი, სუფთა. მაგრამ ზამთარში დინება ეცემა.', en: 'Any region — cheap, clean. But winter flow collapses.' },
+  },
+  mediumhydro: {
+    icon: '🌊',
+    name: { ka: 'საშუალო ჰესი', en: 'Medium HES' },
+    desc: { ka: 'მხოლოდ ძლიერ მდინარეებზე (წყალი ≥6). ზამთარშიც უფრო სტაბილური.', en: 'Only on strong rivers (water ≥6). Steadier through winter.' },
   },
   turbine: {
     icon: '🌀',

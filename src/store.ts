@@ -77,7 +77,9 @@ function urlParams() {
     seed: p.get('seed'),
     region: region && REGIONS.some((r) => r.id === region) ? region : null,
     act: p.get('act'), // judge mode — wired to prepared midgames at M5
-    fxHigh: p.get('fx') === 'high',
+    // Premium shadows default ON for desktop (all regions); ?fx=low or mobile opts
+    // out for perf. Was opt-in (?fx=high) which is why shadows "didn't show".
+    fxHigh: p.get('fx') !== 'low' && !window.matchMedia('(max-width: 720px)').matches,
   }
 }
 

@@ -4,6 +4,36 @@ import type { RegionId } from '../../engine/types'
 import { GEORGIA_VIEWBOX, REGION_GEOMETRY, CONTEXT_GEOMETRY } from './georgiaGeometry'
 import { ResIcon } from '../ui/Icon'
 
+// Split a (possibly long) region name into ≤2 balanced lines so labels never
+// overlap their neighbours. Prefer a hyphen, then a space, near the middle.
+function splitLabel(name: string): string[] {
+  if (name.length <= 11) return [name]
+  const hyphen = name.indexOf('-')
+  if (hyphen > 0 && hyphen < name.length - 1) return [name.slice(0, hyphen + 1), name.slice(hyphen + 1).trim()]
+  const mid = Math.floor(name.length / 2)
+  let space = -1
+  for (let d = 0; d < mid; d++) {
+    if (name[mid - d] === ' ') { space = mid - d; break }
+    if (name[mid + d] === ' ') { space = mid + d; break }
+  }
+  if (space > 0) return [name.slice(0, space), name.slice(space + 1)]
+  return [name]
+}
+
+function MapLabel({ name, x, y, className }: { name: string; x: number; y: number; className: string }) {
+  const lines = splitLabel(name)
+  const long = name.length > 11
+  return (
+    <text className={`${className}${long ? ' is-long' : ''}`} x={x} y={y} textAnchor="middle">
+      {lines.map((line, i) => (
+        <tspan key={i} x={x} dy={i === 0 ? (lines.length > 1 ? '-0.55em' : '0') : '1.1em'}>
+          {line}
+        </tspan>
+      ))}
+    </text>
+  )
+}
+
 interface GeorgiaRegionMapProps {
   lang: Lang
   selected: RegionId | null
@@ -66,9 +96,7 @@ export function GeorgiaRegionMap({
           {CONTEXT_GEOMETRY.map((shape, i) => (
             <g className="geo-context" key={`ctx-${i}`} aria-hidden="true">
               <path className="geo-context-shape" d={shape.path} />
-              <text className="geo-context-label" x={shape.labelX} y={shape.labelY} textAnchor="middle">
-                {lang === 'ka' ? shape.nameKa : shape.nameEn}
-              </text>
+              <MapLabel className="geo-context-label" name={lang === 'ka' ? shape.nameKa : shape.nameEn} x={shape.labelX} y={shape.labelY} />
             </g>
           ))}
 
@@ -105,11 +133,9 @@ export function GeorgiaRegionMap({
                   d={shape.path}
                   vectorEffect="non-scaling-stroke"
                 />
-                <text className="geo-region-label" x={shape.labelX} y={shape.labelY} textAnchor="middle">
-                  {name}
-                </text>
+                <MapLabel className="geo-region-label" name={name} x={shape.labelX} y={shape.labelY} />
                 {isDisabled && (
-                  <text className="geo-region-check" x={shape.labelX} y={shape.labelY + 26} textAnchor="middle" aria-hidden="true">
+                  <text className="geo-region-check" x={shape.labelX} y={shape.labelY + 32} textAnchor="middle" aria-hidden="true">
                     ✓
                   </text>
                 )}

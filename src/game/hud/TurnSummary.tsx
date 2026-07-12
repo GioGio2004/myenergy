@@ -64,6 +64,9 @@ export function TurnSummary() {
           {r.fallbackUsed > 0 && (
             <Row label={`🛢 ${t('fallbackLabel', lang)}`} value={`${r.fallbackUsed.toLocaleString()} MWh`} cls="warn" />
           )}
+          {r.importLevy > 0 && (
+            <Row label={`🧾 ${t('importLevyLabel', lang)}`} value={`−₾${r.importLevy.toLocaleString()}`} cls="warn" />
+          )}
           {r.exported > 0 && <Row label={`🚢 ${t('exportedLabel', lang)}`} value={`${r.exported.toLocaleString()} MWh`} />}
           {r.spotSold > 0 && <Row label={`💱 ${t('spotSoldLabel', lang)}`} value={`${r.spotSold.toLocaleString()} MWh`} />}
           {r.curtailed > 0 && <Row label={`🗑 ${t('curtailedLabel', lang)}`} value={`${r.curtailed.toLocaleString()} MWh`} cls="warn" />}
@@ -83,6 +86,12 @@ export function TurnSummary() {
           </div>
         )}
         {r.contractMissed && <div className="blackout-banner">📜 {t('contractMissedLabel', lang)}</div>}
+        {r.unrestRegions.length > 0 && (
+          <div className="blackout-banner">
+            😠 {t('unrestLabel', lang)}{' '}
+            {r.unrestRegions.map((id) => (lang === 'ka' ? regionById(id).nameKa : regionById(id).nameEn)).join(', ')}
+          </div>
+        )}
 
         {state.act === 1 && !state.gameOver && (
           <p className="panel-note center">

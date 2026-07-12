@@ -16,9 +16,11 @@ export type BuildableId =
   | 'rooftop'
   | 'gig'
   | 'commsolar'
+  | 'smallhydro'
   | 'turbine'
   | 'gaspeaker'
   | 'solarfarm'
+  | 'mediumhydro'
   | 'windfarm'
   | 'battery'
   | 'pumpedhydro'
@@ -76,6 +78,7 @@ export interface RegionState {
   hiring: boolean // +6 trust once, −10% revenue ongoing
   revshare: boolean // +12 trust once, −15% revenue ongoing
   blackouts: number // total, for stats
+  unrestStreak: number // consecutive quarters of crisis-low happiness → people leave (read with ?? 0 for old saves)
 }
 
 export interface ActiveEffect {
@@ -111,6 +114,8 @@ export interface TurnReport {
   costs: number
   event: EventId | null
   contractMissed: boolean
+  unrestRegions: RegionId[] // regions where unhappy citizens dragged the quarter down
+  importLevy: number // GEL you paid for leaning on the national grid this quarter
 }
 
 /** Read-only, immediately recalculated city feedback for the HUD and scene. */

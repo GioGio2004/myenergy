@@ -331,6 +331,18 @@ button.build-row:disabled { cursor: not-allowed; }
   animation: rays 16s linear infinite;
 }
 @keyframes rays { to { transform: rotate(1turn); } }
+/* victory confetti — a celebratory burst, only on a win */
+.confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.confetti i {
+  position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 1px;
+  opacity: 0; animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  100% { transform: translateY(120%) rotate(720deg); opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
 .grade-S { color: var(--sun); border-color: var(--sun); text-shadow: 0 0 24px rgba(242,165,65,0.6); }
 .grade-A { color: #9ade7c; border-color: #9ade7c; }
 .grade-B { color: var(--sky); border-color: var(--sky); }
@@ -595,6 +607,9 @@ html.big { font-size: 110%; }
 .geo-region.is-selected .geo-region-label { fill: var(--night); stroke: rgba(255, 248, 232, 0.3); }
 .geo-region.is-disabled .geo-region-label { fill: rgba(250, 243, 227, 0.52); }
 .geo-region-check { fill: #b8dca4; font-size: 24px; }
+/* long, multi-line region/context names render smaller so they never overlap neighbours */
+.geo-region-label.is-long { font-size: 15px; }
+.geo-context-label.is-long { font-size: 12.5px; }
 .geo-map-hint { margin: 7px 4px 1px; color: var(--cream-dim); font-size: 11px; line-height: 1.4; text-align: center; }
 .geo-map-shell.is-compact .geo-map-hint { margin-top: 3px; }
 
