@@ -18,7 +18,7 @@ import { PlacementBar } from '../hud/PlacementBar'
 import { AssetInspector } from '../hud/AssetInspector'
 import { CitizenReaction } from '../hud/CitizenReaction'
 import { FirstMissionCoach } from '../hud/FirstMissionCoach'
-import { SponsorFrame } from '../hud/SponsorFrame'
+import { SponsorCard } from '../hud/SponsorCard'
 import { DioramaView } from '../scene/DioramaView'
 import { BUILDABLE_TEXT, EVENT_TEXT, pick, t } from '../../engine/strings'
 
@@ -82,7 +82,6 @@ export function GameScreen() {
             </div>
           )}
           <CitizenReaction />
-          <SponsorFrame />
         </div>
         {canExpand && !panel && (
           <button className="btn expand-banner" onClick={() => setExpandOpen(true)}>
@@ -102,6 +101,7 @@ export function GameScreen() {
         <PlacementBar />
         <AssetInspector />
         <FirstMissionCoach />
+        <SponsorCard />
         <Toast />
       </main>
       <ActionBar />

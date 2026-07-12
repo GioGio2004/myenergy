@@ -34,6 +34,9 @@ export function DioramaView() {
       onOccupiedSlot() {
         useStore.setState({ lastRejection: 'rejSlotTaken' }) // toast: this plot is taken
       },
+      onSponsorSelect(id) {
+        useStore.getState().setActiveSponsor(id) // open the sponsor info card
+      },
     })
     const sync = (store: ReturnType<typeof useStore.getState>) => {
       if (!store.state) return

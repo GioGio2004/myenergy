@@ -49,6 +49,7 @@ interface Store {
   viewRegion: RegionId | null // region currently shown by the diorama
   placement: PlacementMode | null
   selectedPlantId: number | null
+  activeSponsor: string | null // sponsor whose info card is open (clicked an edge board)
   lastChange: LiveChange | null
 
   boot(): Promise<void>
@@ -64,6 +65,7 @@ interface Store {
   beginPlacement(buildable: BuildableId, region: RegionId): void
   cancelPlacement(): void
   selectPlant(plantId: number | null): void
+  setActiveSponsor(id: string | null): void
   closeSummary(): void
   closeActSplash(): void
   clearRejection(): void
@@ -105,6 +107,7 @@ export const useStore = create<Store>((set, get) => ({
   viewRegion: null,
   placement: null,
   selectedPlantId: null,
+  activeSponsor: null,
   lastChange: null,
 
   async boot() {
@@ -183,6 +186,9 @@ export const useStore = create<Store>((set, get) => ({
     set({ placement: null })
   },
 
+  setActiveSponsor(id) {
+    set({ activeSponsor: id })
+  },
   selectPlant(plantId) {
     set({ selectedPlantId: plantId, placement: null })
   },

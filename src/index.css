@@ -857,7 +857,7 @@ html.big { font-size: 110%; }
 .scene-hint {
   position: absolute;
   left: 50%;
-  bottom: 60px; /* clear of the sponsor perimeter ribbon */
+  bottom: 13px;
   z-index: 3;
   max-width: calc(100% - 28px);
   padding: 6px 11px;
@@ -1047,8 +1047,7 @@ html.big { font-size: 110%; }
 .game-screen.is-cinematic .first-mission-coach,
 .game-screen.is-cinematic .placement-bar,
 .game-screen.is-cinematic .asset-inspector,
-.game-screen.is-cinematic .toast,
-.game-screen.is-cinematic .sponsor-frame { display: none !important; }
+.game-screen.is-cinematic .toast { display: none !important; }
 
 /* Tap-away scrim behind an open panel (mobile bottom-sheet). Sits under the panel
    (z 5) and over the canvas; a tap on the exposed area closes the panel. */
@@ -1187,74 +1186,7 @@ html.big { font-size: 110%; }
   .diorama-stack { transition: none; }
 }
 
-/* ---------- sponsor perimeter ribbon (stadium LED-board on the scene edge) ---------- */
-.sponsor-frame {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  z-index: 4;
-  display: flex;
-  justify-content: center;
-  padding: 6px 8px calc(6px + var(--safe-b, 0px));
-  pointer-events: none;
-}
-.sf-ribbon {
-  pointer-events: auto;
-  display: flex;
-  gap: 6px;
-  align-items: stretch;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 5px 7px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(20, 15, 28, 0.62), rgba(20, 15, 28, 0.82));
-  border: 1px solid rgba(250, 243, 227, 0.14);
-  backdrop-filter: blur(7px);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
-}
-.sf-ribbon::-webkit-scrollbar { display: none; }
-.sponsor-board {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  min-width: 80px;
-  max-width: 152px;
-  min-height: 40px;
-  padding: 4px 11px;
-  border-radius: 7px;
-  background: var(--chip, #2f6fa8);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 7px rgba(0, 0, 0, 0.32);
-  cursor: pointer;
-  font: inherit;
-  transition: transform 130ms ease, filter 130ms ease;
-}
-.sponsor-board.is-light { color: #241a12; border-color: rgba(0, 0, 0, 0.18); }
-.sponsor-board:hover { transform: translateY(-2px); filter: brightness(1.07); }
-.sponsor-board:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
-.sponsor-board-name {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  line-height: 1.04;
-  text-align: center;
-  white-space: normal;
-  word-break: break-word;
-}
-.sponsor-board-logo { max-height: 22px; max-width: 128px; object-fit: contain; }
-.sponsor-board-kicker {
-  font-size: 7.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  opacity: 0.82;
-}
-
-/* sponsor info card */
+/* ---------- sponsor info card (opened by clicking a billboard on the rim) ---------- */
 .sponsor-modal { align-items: center; text-align: center; border-top: 4px solid var(--chip, #2f6fa8); }
 .sponsor-modal-badge {
   display: inline-flex;
@@ -1279,11 +1211,3 @@ html.big { font-size: 110%; }
   color: var(--sun);
 }
 .sponsor-modal-blurb { font-size: 14px; color: var(--cream); line-height: 1.45; margin: 0; max-width: 320px; }
-
-@media (max-width: 720px) {
-  .sponsor-frame { padding: 4px 6px calc(4px + var(--safe-b, 0px)); }
-  .sponsor-board { min-width: 68px; min-height: 34px; padding: 3px 8px; }
-  .sponsor-board-name { font-size: 10px; }
-  .sponsor-board-logo { max-height: 18px; }
-  .sponsor-board-kicker { display: none; }
-}

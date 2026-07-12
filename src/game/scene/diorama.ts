@@ -27,7 +27,21 @@ import {
   RIVER_X,
 } from './assets'
 import type { ConstructionSize } from './assets'
+import { SPONSORS, makeSponsorBoard } from './sponsorAssets'
 import { seedFromString, rngNext } from '../../engine/rng'
+
+// Sponsor billboards sit around the RIM of the diorama so they frame the scene
+// instead of crowding the village. Anchors favour the far sides (left/back) that
+// read as backdrop; near corners are sparse to avoid occluding the play area.
+// Each is seated on the terrain and kept off water / steep peaks at build time.
+const SPONSOR_ANCHORS: Array<[number, number]> = [
+  [-6.5, -2.6], [-6.6, 0.6], [-6.4, 3.3], // left rim
+  [-3.6, -4.3], [0.4, -4.5], [3.6, -4.1], // back rim
+  [5.7, -2.1], [5.9, 1.1], [5.6, 3.5], //   right rim
+  [-5.3, 4.7], [4.7, 4.9], //               front corners (skipped on coast)
+]
+// Default camera vantage — boards yaw their front (+Z) toward it so logos read.
+const CAM_VANTAGE = new THREE.Vector3(9.5, 8.5, 11.5)
 
 // Which construction-site scale a buildable uses while it's going up.
 const CONSTRUCTION_SIZE: Partial<Record<string, ConstructionSize>> = {
@@ -71,6 +85,7 @@ interface DioramaHandlers {
   onSlotSelect?(slot: number): void
   onPlantSelect?(plantId: number): void
   onOccupiedSlot?(): void
+  onSponsorSelect?(id: string): void
 }
 
 // A looper travels a closed elliptical route forever — parametrised by u∈[0,1),
@@ -225,6 +240,7 @@ export class Diorama {
   private villageGroup = new THREE.Group()
   private markerGroup = new THREE.Group()
   private ambientGroup = new THREE.Group()
+  private sponsorGroup = new THREE.Group()
   private hemi: THREE.HemisphereLight
   private sun: THREE.DirectionalLight
   private blades: THREE.Group[] = []
@@ -233,6 +249,7 @@ export class Diorama {
   private groundAt: ((x: number, z: number) => number) | null = null
   private signature = ''
   private terrainRegion = ''
+  private sponsorRegion = ''
   private renderQueued = false
   private raf = 0
   private disposed = false
@@ -302,13 +319,14 @@ export class Diorama {
       this.sun.shadow.bias = -0.0004
       this.sun.shadow.normalBias = 0.02 // flat-shaded terrain needs this to kill acne
     }
-    this.scene.add(this.sky, this.hemi, this.sun, this.plantGroup, this.villageGroup, this.markerGroup, this.ambientGroup)
+    this.scene.add(this.sky, this.hemi, this.sun, this.plantGroup, this.villageGroup, this.markerGroup, this.ambientGroup, this.sponsorGroup)
 
     // context loss: rebuild the whole scene from state (scene = f(state), trivial)
     this.renderer.domElement.addEventListener('webglcontextlost', (e) => e.preventDefault())
     this.renderer.domElement.addEventListener('webglcontextrestored', () => {
       this.signature = ''
       this.terrainRegion = ''
+      this.sponsorRegion = ''
       if (this.lastState) this.sync(this.lastState, this.lastInteraction ?? undefined)
     })
     this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown)
@@ -368,6 +386,27 @@ export class Diorama {
     const profile = getTerrainProfile(rdef)
     const ground = (x: number, z: number) => terrainHeight(x, z, profile, phase)
     this.groundAt = ground // loopers read this each frame to hug the terrain
+
+    // ---- sponsor billboards around the RIM (region-gated; frames the scene) ----
+    // Filter anchors to buildable spots FIRST, then hand them out one-per-sponsor
+    // so every partner is guaranteed a board even when some rim spots fall in the
+    // sea / on a peak. Extra valid spots cycle back through the roster.
+    if (this.sponsorRegion !== activeRegion) {
+      this.disposeChildren(this.sponsorGroup)
+      const spots = SPONSOR_ANCHORS.filter(([x, z]) => {
+        if (rdef.coast && z > 3.4) return false // anchor is in the sea for this region
+        const gy = ground(x, z)
+        return gy >= 0.05 && gy <= 1.7 // off water, off steep peaks
+      })
+      spots.forEach(([x, z], i) => {
+        const s = SPONSORS[i % SPONSORS.length]
+        const board = makeSponsorBoard(s, 1.25)
+        board.position.set(x, ground(x, z), z)
+        board.rotation.y = Math.atan2(CAM_VANTAGE.x - x, CAM_VANTAGE.z - z)
+        this.sponsorGroup.add(board)
+      })
+      this.sponsorRegion = activeRegion
+    }
 
     // sky + light mood: seasons tint the day; a blackout makes the diorama GO DARK
     const horizon = blackout ? SKY_BLACKOUT : SKY[season]
@@ -557,9 +596,6 @@ export class Diorama {
       this.plantGroup.add(display)
     }
 
-    // Sponsor placements moved OUT of the 3D scene → a DOM perimeter ribbon
-    // (src/game/hud/SponsorFrame.tsx) so ads never steal focus from the diorama.
-
     // ---- construction plots: visible only when the player is placing ----
     this.disposeChildren(this.markerGroup)
     const placement = interaction.placement?.region === activeRegion ? interaction.placement : null
@@ -649,6 +685,16 @@ export class Diorama {
         node = node.parent
       }
     }
+    // Sponsor billboards (lowest priority — they sit on the rim, clear of slots)
+    let sponsorId: string | null = null
+    if (!markerHit && plantId === null) {
+      const sponsorHit = this.raycaster.intersectObjects(this.sponsorGroup.children, true)[0]?.object
+      let node: THREE.Object3D | null = sponsorHit ?? null
+      while (node && sponsorId === null) {
+        if (typeof node.userData.sponsor === 'string') sponsorId = node.userData.sponsor
+        node = node.parent
+      }
+    }
 
     if (this.hovered !== markerHit) {
       if (this.hovered?.parent === this.markerGroup) this.hovered.scale.setScalar(1)
@@ -656,11 +702,12 @@ export class Diorama {
       if (markerAvailable && markerHit) markerHit.scale.setScalar(1.2)
       this.requestRender()
     }
-    this.renderer.domElement.style.cursor = markerAvailable || plantId !== null ? 'pointer' : ''
+    this.renderer.domElement.style.cursor = markerAvailable || plantId !== null || sponsorId !== null ? 'pointer' : ''
     if (!commit) return
     if (markerAvailable && markerHit) this.handlers.onSlotSelect?.(markerHit.userData.slot as number)
     else if (markerHit) this.handlers.onOccupiedSlot?.() // tapped a taken plot — give feedback
     else if (plantId !== null) this.handlers.onPlantSelect?.(plantId)
+    else if (sponsorId !== null) this.handlers.onSponsorSelect?.(sponsorId) // open the sponsor card
   }
 
   /** Lightweight cosmetic loop: the city moves, but simulation state never does. */
@@ -757,6 +804,7 @@ export class Diorama {
     this.disposeChildren(this.villageGroup)
     this.disposeChildren(this.markerGroup)
     this.disposeChildren(this.ambientGroup)
+    this.disposeChildren(this.sponsorGroup)
     this.renderer.dispose()
     this.renderer.domElement.remove()
   }
