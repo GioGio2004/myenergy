@@ -474,7 +474,7 @@ export class Diorama {
           break
         case 'smallhydro':
           mesh = makeDam(false)
-          mesh.scale.setScalar(0.62) // a modest run-of-river weir
+          mesh.scale.setScalar(0.72) // a modest run-of-river weir
           break
         case 'pumpedhydro':
           mesh = makeDam(false)
@@ -500,7 +500,11 @@ export class Diorama {
         default:
           continue // gig has no physical form
       }
-      const y = p.type === 'offshore' ? -0.16 : ground(pos[0], pos[1])
+      // short river dams (small/medium/pumped hydro) span the river AT the water
+      // surface — otherwise they sink into the carved riverbed and the water plane
+      // hides them. The tall HPP still seats on the bed (it clears the water anyway).
+      const shortRiverDam = p.type === 'smallhydro' || p.type === 'mediumhydro' || p.type === 'pumpedhydro'
+      const y = p.type === 'offshore' ? -0.16 : shortRiverDam ? -0.13 : ground(pos[0], pos[1])
       mesh.position.set(pos[0], y, pos[1])
       mesh.traverse((o) => {
         o.userData.plantId = p.id

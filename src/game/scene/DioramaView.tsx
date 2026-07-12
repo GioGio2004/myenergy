@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import { Diorama } from './diorama'
 import { buildRejection } from '../../engine/engine'
+import type { StringKey } from '../../engine/strings'
 
 // React bridge for the imperative living-world scene. The engine remains the
 // authority; raycasted plot/asset clicks are translated into normal actions.
@@ -17,7 +18,11 @@ export function DioramaView() {
         const store = useStore.getState()
         if (!store.state || !store.placement) return
         const { buildable, region } = store.placement
-        if (buildRejection(store.state, buildable, region, slot)) return
+        const rej = buildRejection(store.state, buildable, region, slot)
+        if (rej) {
+          useStore.setState({ lastRejection: rej as StringKey }) // surface WHY (money, etc.) instead of a silent no-op
+          return
+        }
         store.dispatch({ type: 'build', buildable, region, slot })
         store.cancelPlacement()
       },
