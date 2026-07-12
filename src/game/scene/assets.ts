@@ -44,6 +44,8 @@ export const MAT = {
   // match the terrain. cream walls, terracotta roofs, bark trim, rock chimneys.
   houseWall: new THREE.MeshStandardMaterial({ color: 0xf5e7c8, roughness: 0.9, flatShading: true }),
   houseRoof: new THREE.MeshStandardMaterial({ color: 0xc4552f, roughness: 0.9, flatShading: true }),
+  // glossy solar glass (ported look) — catches a sun glint like the premium water
+  solarPanel: new THREE.MeshStandardMaterial({ color: 0x2f6fa8, roughness: 0.25, metalness: 0.35, flatShading: true }),
   windowOn: new THREE.MeshBasicMaterial({ color: 0xffd97a }),
   windowOff: new THREE.MeshBasicMaterial({ color: 0x2a2138 }),
   // Glossy teal water: low roughness + a little metalness gives a sun glint, faint
@@ -446,6 +448,10 @@ export function makeTurbine(scale = 1): THREE.Group {
     arm.rotation.z = (i * Math.PI * 2) / 3
     blades.add(arm)
   }
+  // amber rotor hub (ported detail) — spins with the blades
+  const hub = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), MAT.batteryStripe)
+  hub.position.y = 0
+  blades.add(hub)
   blades.position.set(0, 2.0, 0.22)
   g.add(pole, nac, blades)
   g.scale.setScalar(scale)
@@ -456,8 +462,9 @@ export function makeSolarArray(rows: number, cols: number): THREE.Group {
   const g = new THREE.Group()
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.3), MAT.panel)
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.3), MAT.solarPanel)
       panel.rotation.x = -0.42
+      panel.castShadow = true
       panel.position.set((c - (cols - 1) / 2) * 0.5, 0.18, (r - (rows - 1) / 2) * 0.42)
       const leg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.16, 0.03), MAT.panelFrame)
       leg.position.set(panel.position.x, 0.08, panel.position.z)
