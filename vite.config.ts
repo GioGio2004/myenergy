@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
-        name: 'დენი — Energy Stewards of Georgia',
-        short_name: 'დენი',
+        name: 'MyEnerge — Energy Stewards of Georgia',
+        short_name: 'MyEnerge',
         description: 'ააშენე ცოცხალი ენერგო-ქალაქი, გაანათე საქართველო და შეამცირე იმპორტზე დამოკიდებულება.',
         lang: 'ka',
         display: 'standalone',

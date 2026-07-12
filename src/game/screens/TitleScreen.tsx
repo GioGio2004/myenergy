@@ -2,6 +2,7 @@ import { useStore } from '../../store'
 import { t } from '../../engine/strings'
 import { Icon } from '../ui/Icon'
 import { HOME_URL } from '../../config'
+import { SPONSORS } from '../scene/sponsors'
 import hero from '../../assets/hero.png'
 
 export function TitleScreen() {
@@ -29,6 +30,20 @@ export function TitleScreen() {
         <button className="btn btn-ghost btn-small title-demo-btn" onClick={() => startDemo(2)}>
           ▶ {t('demoJump', lang)}
         </button>
+      </div>
+      <div className="title-partners" aria-label={t('partnersLabel', lang)}>
+        <span className="title-partners-label">{t('partnersLabel', lang)}</span>
+        <div className="title-partners-logos">
+          {SPONSORS.map((s) => (
+            <span
+              key={s.id}
+              className="partner-chip"
+              style={{ ['--chip' as string]: `#${s.color.toString(16).padStart(6, '0')}` }}
+            >
+              {s.name}
+            </span>
+          ))}
+        </div>
       </div>
       <button
         className="lang-toggle"

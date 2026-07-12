@@ -86,6 +86,17 @@ body {
 .howto-step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: rgba(242, 165, 65, 0.18); color: var(--sun); font-size: 12px; font-weight: 800; }
 .title-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 26px; width: min(280px, 80%); }
 .title-actions .btn { font-size: 18px; padding: 14px; }
+.title-partners { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 30px; width: min(360px, 88%); }
+.title-partners-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cream-dim); }
+.title-partners-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.partner-chip {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.03em;
+  padding: 4px 9px; border-radius: 999px;
+  color: var(--cream);
+  background: color-mix(in srgb, var(--chip) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip) 55%, transparent);
+  white-space: nowrap;
+}
 .lang-toggle {
   position: fixed;
   top: 14px; right: 14px;

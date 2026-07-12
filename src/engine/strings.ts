@@ -8,12 +8,13 @@ export type Lang = 'ka' | 'en'
 export type Entry = { ka: string; en: string }
 
 const S = {
-  appTitle: { ka: 'დენი', en: 'DENI' },
+  appTitle: { ka: 'MyEnerge', en: 'MyEnerge' },
   appSubtitle: { ka: 'საქართველოს ენერგიის მეურვეები', en: 'Energy Stewards of Georgia' },
   tagline: {
     ka: 'შექმენი ცოცხალი ქალაქი — და გაათავისუფლე საქართველო იმპორტული ენერგიისგან.',
     en: 'Build a living city — and free Georgia from imported energy.',
   },
+  partnersLabel: { ka: 'ორგანიზატორები და პარტნიორები', en: 'Organisers & partners' },
   howToWinTitle: { ka: 'როგორ იმარჯვებ', en: 'How you win' },
   howToWin1: { ka: 'გააჩინე ენერგია ყველა სახლს', en: 'Keep every home powered' },
   howToWin2: { ka: 'მოიპოვე ხალხის ნდობა', en: 'Earn the people’s trust' },
