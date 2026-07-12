@@ -16,12 +16,15 @@ export function FirstMissionCoach() {
     summaryOpen,
     hppOpen,
     expandOpen,
+    coachDismissed,
     setPanel,
     dispatch,
+    dismissCoach,
   } = useStore()
   if (
     !state ||
     state.gameOver ||
+    coachDismissed ||
     panel ||
     placement ||
     selectedPlantId ||
@@ -62,6 +65,15 @@ export function FirstMissionCoach() {
         }}
       >
         {t(btn, lang)}
+      </button>
+      <button
+        className="coach-close"
+        type="button"
+        aria-label={t('close', lang)}
+        title={t('close', lang)}
+        onClick={dismissCoach}
+      >
+        ✕
       </button>
     </aside>
   )

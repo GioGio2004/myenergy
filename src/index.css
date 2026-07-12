@@ -904,6 +904,25 @@ html.big { font-size: 110%; }
 .coach-copy small { color: var(--sun); font-size: 9px; font-weight: 850; letter-spacing: 0.07em; text-transform: uppercase; }
 .coach-copy strong { color: var(--cream); font-size: 11px; font-weight: 600; line-height: 1.4; }
 .first-mission-coach .btn { flex-shrink: 0; max-width: 210px; }
+/* Dismiss the coach entirely (it won't reappear until a new game). */
+.coach-close {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(250, 243, 227, 0.14);
+  border-radius: 8px;
+  background: rgba(250, 243, 227, 0.06);
+  color: var(--cream-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+.coach-close:hover { background: rgba(250, 243, 227, 0.16); color: var(--cream); }
 .scene-hint {
   position: absolute;
   left: 50%;

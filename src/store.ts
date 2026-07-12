@@ -50,6 +50,7 @@ interface Store {
   placement: PlacementMode | null
   selectedPlantId: number | null
   activeSponsor: string | null // sponsor whose info card is open (clicked an edge board)
+  coachDismissed: boolean // player closed the FirstMissionCoach card with its X
   lastChange: LiveChange | null
 
   boot(): Promise<void>
@@ -66,6 +67,7 @@ interface Store {
   cancelPlacement(): void
   selectPlant(plantId: number | null): void
   setActiveSponsor(id: string | null): void
+  dismissCoach(): void
   closeSummary(): void
   closeActSplash(): void
   clearRejection(): void
@@ -108,6 +110,7 @@ export const useStore = create<Store>((set, get) => ({
   placement: null,
   selectedPlantId: null,
   activeSponsor: null,
+  coachDismissed: false,
   lastChange: null,
 
   async boot() {
@@ -189,6 +192,9 @@ export const useStore = create<Store>((set, get) => ({
   setActiveSponsor(id) {
     set({ activeSponsor: id })
   },
+  dismissCoach() {
+    set({ coachDismissed: true })
+  },
   selectPlant(plantId) {
     set({ selectedPlantId: plantId, placement: null })
   },
@@ -208,7 +214,7 @@ export const useStore = create<Store>((set, get) => ({
   newGame(region) {
     const seed = (crypto.getRandomValues(new Uint32Array(1))[0]) >>> 0
     const state = createInitialState(seed, region)
-    set({ state, screen: 'game', viewRegion: region, lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null })
+    set({ state, screen: 'game', viewRegion: region, lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null, coachDismissed: false })
     saveRepo.persist(state).catch(() => {})
   },
 
@@ -216,12 +222,12 @@ export const useStore = create<Store>((set, get) => ({
   // balanced bot), where the Namakhvani/HPP decision is one tap away. For pitches.
   startDemo(act: 2 | 3) {
     const state = judgeMidgame(JUDGE_SEED, JUDGE_REGION, act)
-    set({ state, screen: 'game', viewRegion: state.regions[0], actSplash: act, lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null })
+    set({ state, screen: 'game', viewRegion: state.regions[0], actSplash: act, lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null, coachDismissed: false })
   },
 
   async continueGame() {
     const save = await saveRepo.load().catch(() => null)
-    if (save?.state.v === 3) set({ state: save.state, screen: 'game', viewRegion: save.state.regions[0], lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null })
+    if (save?.state.v === 3) set({ state: save.state, screen: 'game', viewRegion: save.state.regions[0], lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null, coachDismissed: false })
   },
 
   dispatch(action) {
