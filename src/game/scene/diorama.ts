@@ -20,6 +20,8 @@ import {
   makeTerrain,
   makeTurbine,
   terrainHeight,
+  getTerrainProfile,
+  RIVER_X,
 } from './assets'
 import { seedFromString, rngNext } from '../../engine/rng'
 
@@ -207,7 +209,8 @@ export class Diorama {
     }
 
     const phase = rngNext(seedFromString(activeRegion)).value * Math.PI * 2
-    const ground = (x: number, z: number) => terrainHeight(x, z, rdef.coast, phase)
+    const profile = getTerrainProfile(rdef)
+    const ground = (x: number, z: number) => terrainHeight(x, z, profile, phase)
 
     // sky + light mood: seasons tint the day; a blackout makes the diorama GO DARK
     this.scene.background = new THREE.Color(blackout ? SKY_BLACKOUT : SKY[season])
@@ -223,22 +226,37 @@ export class Diorama {
     this.sun.color.set(season === 'autumn' ? 0xffd9a0 : season === 'winter' ? 0xdfe8ff : 0xffe6b3)
 
     // ---- village: prosperity adds houses; windows die in a blackout ----
+    // Rejection-sampled with a minimum gap so houses never stack on each other,
+    // and kept off the river, the sea, and the road corridor.
     this.disposeChildren(this.villageGroup)
     const houses = 3 + rs.prosperity * 2
+    const placedHouses: Array<[number, number]> = []
+    const HOUSE_GAP = 0.82
     let word = seedFromString(`${activeRegion}-village`)
-    for (let i = 0; i < houses; i++) {
+    let tries = 0
+    while (placedHouses.length < houses && tries < houses * 16) {
+      tries++
       const a = rngNext(word)
       const b = rngNext(a.next)
-      word = b.next
-      const ang = (i / houses) * Math.PI * 2 + a.value
-      const rad = 0.7 + b.value * 1.1
-      const x = -0.4 + Math.cos(ang) * rad
-      const z = -0.2 + Math.sin(ang) * rad * 0.8
+      const c = rngNext(b.next)
+      word = c.next
+      const ang = a.value * Math.PI * 2
+      const rad = 0.9 + b.value * 1.7
+      const x = -0.6 + Math.cos(ang) * rad
+      const z = -0.6 + Math.sin(ang) * rad * 0.82
+      if (Math.abs(x - RIVER_X) < 1.3) continue // off the river
+      if (rdef.coast && z > 3.4) continue // off the sea
+      if (z > 0.2 && z < 1.6 && x > -3.8 && x < 2.4) continue // off the road
+      if (x > 1.2 && z > 1.4) continue // leave the village-build apron clear
+      const h = ground(x, z)
+      if (h < 0.08 || h > 1.2) continue
+      if (placedHouses.some(([hx, hz]) => Math.hypot(hx - x, hz - z) < HOUSE_GAP)) continue
+      placedHouses.push([x, z])
       const house = makeHouse(true)
       const win = house.getObjectByName('window') as THREE.Mesh | null
       if (win) win.material = blackout ? MAT.windowOff : MAT.windowOn
-      house.position.set(x, ground(x, z), z)
-      house.rotation.y = a.value * Math.PI * 2
+      house.position.set(x, h, z)
+      house.rotation.y = c.value * Math.PI * 2
       this.villageGroup.add(house)
     }
 
@@ -254,8 +272,9 @@ export class Diorama {
       if (p.slot !== null) {
         pos = SLOT_POS[p.slot] ?? [0, 0]
       } else {
-        // village-dwelling builds (rooftop, gaspeaker, battery, translink…)
-        pos = [1.6 + (villageExtras % 3) * 0.9, 1.9 + Math.floor(villageExtras / 3) * 0.9]
+        // village-dwelling builds (rooftop, gaspeaker, battery, translink…),
+        // kept left of the river channel so nothing sits in the water
+        pos = [1.2 + (villageExtras % 2) * 0.9, 2.0 + Math.floor(villageExtras / 2) * 0.85]
         villageExtras++
       }
       switch (p.type) {
@@ -371,18 +390,21 @@ export class Diorama {
     // ---- ambient life: a tiny derived crowd and traffic layer, not a second sim ----
     this.disposeChildren(this.ambientGroup)
     this.movers = []
-    const road = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.025, 0.34), MAT.industrial)
-    road.position.set(-0.2, ground(-0.2, 0.8) + 0.035, 0.8)
-    road.rotation.y = -0.08
+    // The road hugs a flat front corridor that stops well short of the river
+    // channel (x ≈ 3.3) so cars never drive into the water.
+    const ROAD_CX = -0.85
+    const road = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.025, 0.34), MAT.industrial)
+    road.position.set(ROAD_CX, ground(ROAD_CX, 0.8) + 0.035, 0.8)
+    road.rotation.y = -0.05
     this.ambientGroup.add(road)
     if (!blackout) {
       const cars = Math.min(5, 1 + rs.prosperity + Math.floor(stats.jobs / 180))
       for (let i = 0; i < cars; i++) {
         const car = makeCar(i)
-        car.position.set(-0.2, road.position.y + 0.02, 0.76 + (i % 2) * 0.16)
+        car.position.set(ROAD_CX, road.position.y + 0.02, 0.76 + (i % 2) * 0.16)
         if (i % 2) car.rotation.y = Math.PI
         this.ambientGroup.add(car)
-        this.movers.push({ object: car, originX: -0.2, originZ: car.position.z, span: 3.1, speed: 0.000035 + i * 0.000004, phase: i / Math.max(cars, 1), axis: 'x' })
+        this.movers.push({ object: car, originX: ROAD_CX, originZ: car.position.z, span: 2.35, speed: 0.000035 + i * 0.000004, phase: i / Math.max(cars, 1), axis: 'x' })
       }
       const people = Math.min(14, 4 + rs.prosperity * 2 + Math.floor(stats.jobs / 120))
       for (let i = 0; i < people; i++) {
@@ -412,7 +434,10 @@ export class Diorama {
     this.pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1)
     this.raycaster.setFromCamera(this.pointer, this.camera)
 
-    const markerHit = this.raycaster.intersectObjects(this.markerGroup.children, true)[0]?.object ?? null
+    // Resolve the hit (ring OR fill disc) up to its marker group, which carries
+    // slot/available — so a click anywhere inside the circle counts.
+    let markerHit: THREE.Object3D | null = this.raycaster.intersectObjects(this.markerGroup.children, true)[0]?.object ?? null
+    while (markerHit && markerHit.parent !== this.markerGroup) markerHit = markerHit.parent
     const markerAvailable = Boolean(markerHit?.userData.available)
     let plantId: number | null = null
     if (!markerHit || !markerAvailable) {

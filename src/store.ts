@@ -44,6 +44,7 @@ interface Store {
   actSplash: 2 | 3 | null // shown once when an act is reached (after the summary)
   expandOpen: boolean // second-region picker (Act II)
   mapOpen: boolean // world export map
+  nationalMapOpen: boolean // zoom-out national map: switch region / expand
   viewRegion: RegionId | null // region currently shown by the diorama
   placement: PlacementMode | null
   selectedPlantId: number | null
@@ -56,6 +57,7 @@ interface Store {
   setHppOpen(open: boolean): void
   setExpandOpen(open: boolean): void
   setMapOpen(open: boolean): void
+  setNationalMapOpen(open: boolean): void
   setViewRegion(region: RegionId): void
   beginPlacement(buildable: BuildableId, region: RegionId): void
   cancelPlacement(): void
@@ -93,6 +95,7 @@ export const useStore = create<Store>((set, get) => ({
   actSplash: null,
   expandOpen: false,
   mapOpen: false,
+  nationalMapOpen: false,
   viewRegion: null,
   placement: null,
   selectedPlantId: null,
@@ -143,6 +146,10 @@ export const useStore = create<Store>((set, get) => ({
 
   setMapOpen(open) {
     set({ mapOpen: open })
+  },
+
+  setNationalMapOpen(open) {
+    set({ nationalMapOpen: open })
   },
 
   setViewRegion(region) {

@@ -5,8 +5,16 @@ import * as D from '../../engine/data'
 import type { RegionId, TrustActionId } from '../../engine/types'
 import { cityStats } from '../../engine/engine'
 import { RegionTabs } from './RegionTabs'
+import { Icon, type IconName } from '../ui/Icon'
 
 const ORDER: TrustActionId[] = ['townhall', 'school', 'eia', 'hiring', 'revshare']
+const ACTION_ICON: Record<TrustActionId, IconName> = {
+  townhall: 'people',
+  school: 'info',
+  eia: 'leaf',
+  hiring: 'jobs',
+  revshare: 'money',
+}
 
 function retentionPercent(multiplier: number) {
   const percent = multiplier * 100
@@ -23,7 +31,7 @@ export function TrustPanel() {
 
   return (
     <section className="panel">
-      <h3 className="panel-title">🤝 {t('trustPanelTitle', lang)}</h3>
+      <h3 className="panel-title"><Icon name="handshake" size={19} className="panel-title-icon" /> {t('trustPanelTitle', lang)}</h3>
       <RegionTabs value={region} onChange={(id) => { setViewRegion(id); setReviewing(null) }} />
 
       <div className="trust-meter">
@@ -36,7 +44,7 @@ export function TrustPanel() {
       <p className="panel-note">{t('awarenessNote', lang)}</p>
       <p className="panel-note">
         {t('communityCount', lang)}: <b>{rs.communityActions}</b>
-        {rs.eiaDone && ` · ✅ ${t('eiaFlag', lang)}`}
+        {rs.eiaDone && <> · <Icon name="check" size={13} className="inline-check" /> {t('eiaFlag', lang)}</>}
       </p>
 
       <div className="panel-list">
@@ -69,7 +77,7 @@ export function TrustPanel() {
                 }
               }}
             >
-              <span className="build-icon">{text.icon}</span>
+              <span className="build-icon build-icon-svg"><Icon name={ACTION_ICON[id]} size={22} /></span>
               <span className="build-info">
                 <span className="build-name">{pick(text.name, lang)} {starter && <em className="starter-badge">★ {t('startHere', lang)}</em>}</span>
                 <span className="build-desc">{pick(text.desc, lang)}</span>
@@ -89,7 +97,7 @@ export function TrustPanel() {
                   )}
                 </span>
                 {permanent && <span className="permanent-badge">∞ {t('permanentLabel', lang)}</span>}
-                {why && <span className="build-why">🔒 {why}</span>}
+                {why && <span className="build-why"><Icon name="lock" size={12} /> {why}</span>}
               </span>
               {!why && <span className="build-cta">{permanent ? (isReviewing ? t('applyPolicy', lang) : t('confirmChoice', lang)) : `+${gain}`}</span>}
             </button>

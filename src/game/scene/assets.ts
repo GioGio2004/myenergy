@@ -3,6 +3,7 @@
 
 import * as THREE from 'three'
 import type { RegionDef } from '../../engine/data'
+import type { RegionId } from '../../engine/types'
 import { seedFromString, rngNext } from '../../engine/rng'
 
 // ---------- shared toon materials (created once, reused everywhere) ----------
@@ -30,12 +31,17 @@ export const MAT = {
   rockDark: toon(0x6b5d52),
   windowOn: new THREE.MeshBasicMaterial({ color: 0xffd97a }),
   windowOff: new THREE.MeshBasicMaterial({ color: 0x2a2138 }),
-  water: new THREE.MeshToonMaterial({ color: 0x74a4bc, transparent: true, opacity: 0.85 }),
-  sea: new THREE.MeshToonMaterial({ color: 0x4f8aa8, transparent: true, opacity: 0.9 }),
+  // depthWrite:false stops the transparent water table from z-fighting/shimmering
+  // against the terrain waterline as the camera orbits (bug: water texture lag).
+  water: new THREE.MeshToonMaterial({ color: 0x74a4bc, transparent: true, opacity: 0.82, depthWrite: false }),
+  sea: new THREE.MeshToonMaterial({ color: 0x4f8aa8, transparent: true, opacity: 0.9, depthWrite: false }),
   soil: toon(0x7a5f48),
   ghost: new THREE.MeshToonMaterial({ color: 0xd8cdb4, transparent: true, opacity: 0.45 }),
-  markerAvailable: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.82, side: THREE.DoubleSide }),
-  markerOccupied: new THREE.MeshBasicMaterial({ color: 0x9c98a8, transparent: true, opacity: 0.42, side: THREE.DoubleSide }),
+  markerAvailable: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
+  markerOccupied: new THREE.MeshBasicMaterial({ color: 0x9c98a8, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+  // translucent fills give the whole circle a hit target, not just the ring
+  markerFill: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.24, side: THREE.DoubleSide, depthWrite: false }),
+  markerFillOcc: new THREE.MeshBasicMaterial({ color: 0x9c98a8, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }),
 }
 
 // ---------- terrain ----------
@@ -56,18 +62,52 @@ export const SLOT_POS: Array<[number, number]> = [
   [1.0, 6.9],
 ]
 
-const RIVER_X = 3.3
-const RIDGE_Z = -5
+export const RIVER_X = 3.3
+export const RIDGE_Z = -5
 
-export function terrainHeight(x: number, z: number, coast: boolean, phase: number): number {
-  // gentle rolling base
-  let h = 0.22 + 0.14 * Math.sin(x * 0.7 + phase) * Math.cos(z * 0.6 + phase * 1.7)
-  // back ridge
-  h += 1.7 * Math.exp(-((z - RIDGE_Z) * (z - RIDGE_Z)) / 2.4)
+// Per-region terrain "character" so no two regions read the same: ridge height,
+// rolling amplitude, river depth, ridge spread, and a grass/rock/sand palette.
+export interface TerrainProfile {
+  coast: boolean
+  ridgeH: number
+  ridgeSpread: number
+  amp: number
+  riverDepth: number
+  grass: number
+  rock: number
+  sand: number
+}
+
+const REGION_TERRAIN: Record<RegionId, Omit<TerrainProfile, 'coast'>> = {
+  // sunny wine valley — low golden hills, gentle river
+  kakheti:   { ridgeH: 1.05, ridgeSpread: 3.0, amp: 0.18, riverDepth: 0.75, grass: 0x9a9a45, rock: 0x9c8a66, sand: 0xd9c491 },
+  // open windy plain (Gori) — flat, wide
+  kartli:    { ridgeH: 1.25, ridgeSpread: 3.4, amp: 0.10, riverDepth: 0.85, grass: 0x7f9a4e, rock: 0x93876c, sand: 0xd6c79a },
+  // high cold plateau — broad tableland, shallow water
+  javakheti: { ridgeH: 2.0,  ridgeSpread: 4.6, amp: 0.09, riverDepth: 0.45, grass: 0x5f7d4a, rock: 0x8a8474, sand: 0xc9c19a },
+  // lush green gorge (Namakhvani) — deep river cut
+  imereti:   { ridgeH: 1.6,  ridgeSpread: 2.2, amp: 0.17, riverDepth: 1.45, grass: 0x3f8f45, rock: 0x7c7358, sand: 0xcdb98a },
+  // steep mountains, powerful rivers
+  racha:     { ridgeH: 2.7,  ridgeSpread: 1.9, amp: 0.22, riverDepth: 1.35, grass: 0x3d7d48, rock: 0x726456, sand: 0xbfae86 },
+  // subtropical coast — green, sea in front
+  adjara:    { ridgeH: 1.5,  ridgeSpread: 2.4, amp: 0.16, riverDepth: 0.6,  grass: 0x2f8a4e, rock: 0x77705a, sand: 0xe4d3a0 },
+  // cloudy coastal lowland — flat, humid
+  samegrelo: { ridgeH: 0.8,  ridgeSpread: 3.2, amp: 0.12, riverDepth: 0.8,  grass: 0x46804f, rock: 0x807761, sand: 0xdccaa0 },
+}
+
+export function getTerrainProfile(region: RegionDef): TerrainProfile {
+  return { coast: region.coast, ...REGION_TERRAIN[region.id] }
+}
+
+export function terrainHeight(x: number, z: number, p: TerrainProfile, phase: number): number {
+  // gentle rolling base (amplitude varies per region)
+  let h = 0.22 + p.amp * Math.sin(x * 0.7 + phase) * Math.cos(z * 0.6 + phase * 1.7)
+  // back ridge — height and spread give each region its own skyline
+  h += p.ridgeH * Math.exp(-((z - RIDGE_Z) * (z - RIDGE_Z)) / p.ridgeSpread)
   // river channel carved toward the front
-  h -= 1.1 * Math.exp(-((x - RIVER_X) * (x - RIVER_X)) / 0.55)
+  h -= p.riverDepth * Math.exp(-((x - RIVER_X) * (x - RIVER_X)) / 0.55)
   // coastal strip: front-right melts into the sea
-  if (coast) {
+  if (p.coast) {
     const s = THREE.MathUtils.smoothstep(z, 4.2, 6.5)
     h = THREE.MathUtils.lerp(h, -0.55, s)
   }
@@ -78,21 +118,21 @@ export function makeTerrain(region: RegionDef): THREE.Group {
   const g = new THREE.Group()
   const seed = seedFromString(region.id)
   const phase = rngNext(seed).value * Math.PI * 2
+  const profile = getTerrainProfile(region)
 
   const geo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, 30, 30)
   geo.rotateX(-Math.PI / 2)
   const pos = geo.attributes.position
   const colors = new Float32Array(pos.count * 3)
-  // grass hue varies with the region's sun stat: sunny = warm, cloudy = lush/dark
-  const sunny = region.sun / 9
-  const grass = new THREE.Color().setHSL(0.26 - 0.03 * sunny, 0.42, 0.30 + 0.08 * sunny)
-  const rock = new THREE.Color(0x8a7a68)
-  const sand = new THREE.Color(0xd9c491)
+  // each region carries its own grass/rock/sand palette (set in REGION_TERRAIN)
+  const grass = new THREE.Color(profile.grass)
+  const rock = new THREE.Color(profile.rock)
+  const sand = new THREE.Color(profile.sand)
   const c = new THREE.Color()
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i)
     const z = pos.getZ(i)
-    const h = terrainHeight(x, z, region.coast, phase)
+    const h = terrainHeight(x, z, profile, phase)
     pos.setY(i, h)
     if (h > 1.0) c.copy(rock).lerp(grass, THREE.MathUtils.clamp(1.6 - h, 0, 1))
     else if (h < 0.06) c.copy(sand)
@@ -107,10 +147,13 @@ export function makeTerrain(region: RegionDef): THREE.Group {
   terrain.name = 'terrain'
   g.add(terrain)
 
-  // water table: fills the carved river bed (and the sea, on the coast)
+  // water table: fills the carved river bed (and the sea, on the coast).
+  // renderOrder + depthWrite:false (on the material) keep it from shimmering
+  // against the terrain waterline while the camera moves.
   const water = new THREE.Mesh(new THREE.PlaneGeometry(TERRAIN_SIZE - 0.02, TERRAIN_SIZE - 0.02), region.coast ? MAT.sea : MAT.water)
   water.rotateX(-Math.PI / 2)
   water.position.y = -0.16
+  water.renderOrder = 2
   g.add(water)
 
   // pedestal skirt — the "diorama on a table" look
@@ -128,7 +171,9 @@ export function makeTerrain(region: RegionDef): THREE.Group {
     const z = (b.value - 0.5) * (TERRAIN_SIZE - 4)
     if (Math.abs(x - RIVER_X) < 1.2) continue // not in the river
     if (region.coast && z > 3.8) continue // not in the sea
-    const h = terrainHeight(x, z, region.coast, phase)
+    if (z > 0.1 && z < 1.6 && x > -3.8 && x < 2.4) continue // not on the road corridor
+    if (Math.hypot(x + 0.6, z + 0.6) < 2.7) continue // not inside the village core
+    const h = terrainHeight(x, z, profile, phase)
     if (h < 0.1 || h > 1.2) continue
     const tree = makeTree(i % 2 === 0)
     tree.position.set(x, h, z)
@@ -256,8 +301,16 @@ export function makePylon(): THREE.Group {
   return g
 }
 
-export function makeSlotMarker(available = true): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.52, 28), available ? MAT.markerAvailable : MAT.markerOccupied)
-  m.rotateX(-Math.PI / 2)
-  return m
+/** A placement marker: a bright ring PLUS a translucent filled disc so the whole
+ *  circle (not just the thin ring) is a click target — fixes the "only the green
+ *  edge is clickable" bug. Returns a Group; callers set userData on the group. */
+export function makeSlotMarker(available = true): THREE.Group {
+  const g = new THREE.Group()
+  const fill = new THREE.Mesh(new THREE.CircleGeometry(0.5, 28), available ? MAT.markerFill : MAT.markerFillOcc)
+  fill.rotateX(-Math.PI / 2)
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.54, 28), available ? MAT.markerAvailable : MAT.markerOccupied)
+  ring.rotateX(-Math.PI / 2)
+  ring.position.y = 0.002
+  g.add(fill, ring)
+  return g
 }

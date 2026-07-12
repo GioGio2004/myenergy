@@ -12,6 +12,8 @@ import { NamakhvaniModal } from '../hud/NamakhvaniModal'
 import { ActSplash } from '../hud/ActSplash'
 import { ExpandModal } from '../hud/ExpandModal'
 import { ExportMapModal } from '../hud/ExportMapModal'
+import { NationalMapModal } from '../hud/NationalMapModal'
+import { Icon } from '../ui/Icon'
 import { PlacementBar } from '../hud/PlacementBar'
 import { AssetInspector } from '../hud/AssetInspector'
 import { CitizenReaction } from '../hud/CitizenReaction'
@@ -20,7 +22,7 @@ import { DioramaView } from '../scene/DioramaView'
 import { EVENT_TEXT, pick, t } from '../../engine/strings'
 
 export function GameScreen() {
-  const { lang, state, viewRegion, placement, selectedPlantId, panel, summaryOpen, hppOpen, actSplash, expandOpen, mapOpen, setExpandOpen } =
+  const { lang, state, viewRegion, placement, selectedPlantId, panel, summaryOpen, hppOpen, actSplash, expandOpen, mapOpen, nationalMapOpen, setExpandOpen, setNationalMapOpen } =
     useStore()
   if (!state) return null
   const active = regionById(viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0])
@@ -32,6 +34,14 @@ export function GameScreen() {
         <div className="diorama-stack">
           <DioramaView />
           <span className="diorama-label">{lang === 'ka' ? active.nameKa : active.nameEn}</span>
+          <button
+            className="map-zoomout-btn"
+            type="button"
+            onClick={() => setNationalMapOpen(true)}
+            aria-label={t('nationalMapTitle', lang)}
+          >
+            <Icon name="map" size={16} /> {t('nationalMapBtn', lang)}
+          </button>
           {state.effects.length > 0 && (
             <div className="effects-strip">
               {state.effects.map((e, i) => (
@@ -62,6 +72,7 @@ export function GameScreen() {
       <ActionBar />
       {hppOpen && <NamakhvaniModal />}
       {expandOpen && <ExpandModal />}
+      {nationalMapOpen && <NationalMapModal />}
       {mapOpen && <ExportMapModal />}
       {summaryOpen && state.lastReport && <TurnSummary />}
       {!summaryOpen && actSplash && <ActSplash />}
