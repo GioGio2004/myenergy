@@ -400,7 +400,7 @@ export class Diorama {
       })
       spots.forEach(([x, z], i) => {
         const s = SPONSORS[i % SPONSORS.length]
-        const board = makeSponsorBoard(s, 1.25)
+        const board = makeSponsorBoard(s, 0.84) // −33% from 1.25 (user: boards were too big)
         board.position.set(x, ground(x, z), z)
         board.rotation.y = Math.atan2(CAM_VANTAGE.x - x, CAM_VANTAGE.z - z)
         this.sponsorGroup.add(board)
