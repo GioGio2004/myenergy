@@ -2,7 +2,7 @@ import { useStore } from '../../store'
 import { t } from '../../engine/strings'
 import { Icon } from '../ui/Icon'
 import { HOME_URL } from '../../config'
-import { SPONSORS } from '../scene/sponsors'
+import { SPONSORS, sponsorColorCss } from '../sponsors'
 import hero from '../../assets/hero.png'
 
 export function TitleScreen() {
@@ -38,7 +38,7 @@ export function TitleScreen() {
             <span
               key={s.id}
               className="partner-chip"
-              style={{ ['--chip' as string]: `#${s.color.toString(16).padStart(6, '0')}` }}
+              style={{ ['--chip' as string]: sponsorColorCss(s.color) }}
             >
               {s.name}
             </span>

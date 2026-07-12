@@ -27,22 +27,7 @@ import {
   RIVER_X,
 } from './assets'
 import type { ConstructionSize } from './assets'
-import { SPONSORS, plantSponsor, makeSponsorBoard, makeSponsorBanner, makeSponsorPlacard } from './sponsors'
 import { seedFromString, rngNext } from '../../engine/rng'
-
-// Fixed roadside billboard anchors in front of the village (grass, clear of the
-// road oval, river, sea and build slots). Sponsors cycle through these so every
-// partner surfaces; the set rotates per region for variety.
-const BILLBOARD_ANCHORS: Array<[number, number]> = [
-  [-5.4, 2.3],
-  [-3.6, 2.7],
-  [-1.9, 2.95],
-  [-0.3, 2.85],
-  [1.0, 2.5],
-]
-// Default camera vantage — boards/placards yaw their front (+Z) toward it so the
-// plaques stay readable from the opening view.
-const CAM_VANTAGE = new THREE.Vector3(9.5, 8.5, 11.5)
 
 // Which construction-site scale a buildable uses while it's going up.
 const CONSTRUCTION_SIZE: Partial<Record<string, ConstructionSize>> = {
@@ -240,7 +225,6 @@ export class Diorama {
   private villageGroup = new THREE.Group()
   private markerGroup = new THREE.Group()
   private ambientGroup = new THREE.Group()
-  private sponsorGroup = new THREE.Group()
   private hemi: THREE.HemisphereLight
   private sun: THREE.DirectionalLight
   private blades: THREE.Group[] = []
@@ -318,7 +302,7 @@ export class Diorama {
       this.sun.shadow.bias = -0.0004
       this.sun.shadow.normalBias = 0.02 // flat-shaded terrain needs this to kill acne
     }
-    this.scene.add(this.sky, this.hemi, this.sun, this.plantGroup, this.villageGroup, this.markerGroup, this.ambientGroup, this.sponsorGroup)
+    this.scene.add(this.sky, this.hemi, this.sun, this.plantGroup, this.villageGroup, this.markerGroup, this.ambientGroup)
 
     // context loss: rebuild the whole scene from state (scene = f(state), trivial)
     this.renderer.domElement.addEventListener('webglcontextlost', (e) => e.preventDefault())
@@ -442,7 +426,6 @@ export class Diorama {
 
     // ---- plants on their slots ----
     this.disposeChildren(this.plantGroup)
-    this.disposeChildren(this.sponsorGroup) // sponsor placements rebuilt alongside plants
     this.blades = []
     this.cranes = []
     let rooftops = 0
@@ -572,49 +555,10 @@ export class Diorama {
         display.add(halo)
       }
       this.plantGroup.add(display)
-
-      // Sponsor placard beside a FINISHED physical plant — branded, honest
-      // placement (gas→SOCAR, renewables→GREDA/GRPO, storage/grid→VDC). Offset
-      // toward the camera and only when it lands on dry ground (skips sea/river).
-      const sp = p.turnsLeft === 0 ? plantSponsor(p.type) : null
-      if (sp) {
-        const dx = CAM_VANTAGE.x - pos[0]
-        const dz = CAM_VANTAGE.z - pos[1]
-        const len = Math.hypot(dx, dz) || 1
-        const px = pos[0] + (dx / len) * 0.95
-        const pz = pos[1] + (dz / len) * 0.95
-        const gy = ground(px, pz)
-        if (gy > 0.02) {
-          const placard = makeSponsorPlacard(sp)
-          placard.position.set(px, gy, pz)
-          placard.rotation.y = Math.atan2(CAM_VANTAGE.x - px, CAM_VANTAGE.z - pz)
-          this.sponsorGroup.add(placard)
-        }
-      }
     }
 
-    // ---- sponsor billboards + house banners (the monetization surface) ----
-    // Roadside boards along the village front cycle every partner (start index
-    // rotates per region for variety); coastal regions skip anchors in the sea.
-    const boardStart = ((seedFromString(activeRegion) % SPONSORS.length) + SPONSORS.length) % SPONSORS.length
-    BILLBOARD_ANCHORS.forEach(([x, z], i) => {
-      if (rdef.coast && z > 3.4) return
-      const s = SPONSORS[(boardStart + i) % SPONSORS.length]
-      const board = makeSponsorBoard(s)
-      board.position.set(x, ground(x, z), z)
-      board.rotation.y = Math.atan2(CAM_VANTAGE.x - x, CAM_VANTAGE.z - z)
-      this.sponsorGroup.add(board)
-    })
-    // A banner in front of the first few homes — "this neighbourhood is powered by…"
-    this.villageGroup.children.slice(0, 3).forEach((house, i) => {
-      const s = SPONSORS[(boardStart + 2 + i) % SPONSORS.length]
-      const banner = makeSponsorBanner(s)
-      const bx = house.position.x
-      const bz = house.position.z + 0.62
-      banner.position.set(bx, ground(bx, bz), bz)
-      banner.rotation.y = Math.atan2(CAM_VANTAGE.x - bx, CAM_VANTAGE.z - bz)
-      this.sponsorGroup.add(banner)
-    })
+    // Sponsor placements moved OUT of the 3D scene → a DOM perimeter ribbon
+    // (src/game/hud/SponsorFrame.tsx) so ads never steal focus from the diorama.
 
     // ---- construction plots: visible only when the player is placing ----
     this.disposeChildren(this.markerGroup)
@@ -813,7 +757,6 @@ export class Diorama {
     this.disposeChildren(this.villageGroup)
     this.disposeChildren(this.markerGroup)
     this.disposeChildren(this.ambientGroup)
-    this.disposeChildren(this.sponsorGroup)
     this.renderer.dispose()
     this.renderer.domElement.remove()
   }
