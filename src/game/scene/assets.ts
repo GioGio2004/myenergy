@@ -54,9 +54,12 @@ export const MAT = {
   soil: toon(0x7a5f48),
   ghost: new THREE.MeshToonMaterial({ color: 0xd8cdb4, transparent: true, opacity: 0.45 }),
   markerAvailable: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
+  // Beacon draws OVER terrain/water (depthTest:false) so a slot is never half-hidden
+  // behind a hill or the river — the "tap here" affordance.
+  beacon: new THREE.MeshBasicMaterial({ color: 0x9dffb4, toneMapped: false, transparent: true, opacity: 0.96, depthTest: false }),
   markerOccupied: new THREE.MeshBasicMaterial({ color: 0x9c98a8, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
   // translucent fills give the whole circle a hit target, not just the ring
-  markerFill: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.24, side: THREE.DoubleSide, depthWrite: false }),
+  markerFill: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false }),
   markerFillOcc: new THREE.MeshBasicMaterial({ color: 0x9c98a8, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }),
 }
 
@@ -526,6 +529,21 @@ export function makeSlotMarker(available = true): THREE.Group {
   ring.rotateX(-Math.PI / 2)
   ring.position.y = 0.002
   g.add(fill, ring)
+  if (available) {
+    // Floating beacon (named 'beacon' so the diorama bobs/pulses it): a light beam
+    // + a downward pin that hovers over the slot and always renders on top.
+    const beacon = new THREE.Group()
+    beacon.name = 'beacon'
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 6), MAT.beacon)
+    beam.position.y = 0.55
+    beam.renderOrder = 999
+    const pin = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.26, 6), MAT.beacon)
+    pin.position.y = 0.9
+    pin.rotation.x = Math.PI // point the tip down at the slot
+    pin.renderOrder = 999
+    beacon.add(beam, pin)
+    g.add(beacon)
+  }
   return g
 }
 

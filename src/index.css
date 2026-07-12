@@ -77,6 +77,9 @@ body {
 }
 .title-sub { font-size: 15px; color: var(--cream-dim); letter-spacing: 0.06em; }
 .title-tagline { font-size: 14px; color: var(--cream-dim); max-width: 300px; margin-top: 10px; }
+.title-howto { list-style: none; display: flex; flex-direction: column; gap: 7px; margin: 18px 0 0; padding: 0; text-align: left; }
+.title-howto li { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--cream); }
+.howto-step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: rgba(242, 165, 65, 0.18); color: var(--sun); font-size: 12px; font-weight: 800; }
 .title-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 26px; width: min(280px, 80%); }
 .title-actions .btn { font-size: 18px; padding: 14px; }
 .lang-toggle {
@@ -197,6 +200,8 @@ body {
 }
 .panel-title { font-size: 16px; margin-bottom: 10px; }
 .panel-list { display: flex; flex-direction: column; gap: 8px; }
+.build-act-header { margin: 4px 2px -2px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sky); opacity: 0.85; }
+.build-act-header:first-child { margin-top: 0; }
 .panel-note { font-size: 12px; color: var(--cream-dim); margin: 4px 0; line-height: 1.45; }
 .panel-note.dim { opacity: 0.7; }
 .panel-note.center { text-align: center; }
@@ -711,7 +716,9 @@ html.big { font-size: 110%; }
   background: rgba(116, 164, 188, 0.1);
 }
 .mission-ribbon small { flex-shrink: 0; color: var(--sky); font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
-.mission-ribbon strong { overflow: hidden; color: var(--cream); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+/* objective must always be fully readable — wrap instead of truncating */
+.mission-ribbon strong { color: var(--cream); font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+.mission-progress { flex-shrink: 0; margin-left: auto; padding: 2px 9px; border-radius: 999px; background: rgba(157, 224, 124, 0.16); color: #b8f0a0; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .hud-controls { display: flex; align-items: center; gap: 6px; }
 .season-badge { padding: 6px 9px; border-radius: 99px; color: var(--cream); background: rgba(250, 243, 227, 0.07); font-size: 11px; white-space: nowrap; }
 .icon-control {
@@ -750,9 +757,9 @@ html.big { font-size: 110%; }
 .vital-card.power-vital.bad { border-color: rgba(193, 18, 31, 0.44); background: rgba(193, 18, 31, 0.1); }
 .vital-icon { grid-row: 1 / 3; color: var(--sun); font-size: 21px; font-weight: 850; }
 .vital-copy { display: flex; flex-direction: column; min-width: 0; }
-.vital-copy small { overflow: hidden; color: var(--cream-dim); font-size: 9px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.vital-copy small { overflow: hidden; color: var(--cream-dim); font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .vital-copy b { margin-top: 1px; color: var(--cream); font-size: 16px; line-height: 1.15; }
-.vital-sub { grid-column: 2 / 4; overflow: hidden; color: var(--cream-dim); font-size: 8.5px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.vital-sub { grid-column: 2 / 4; overflow: hidden; color: var(--cream-dim); font-size: 11px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .good-text { color: #9ade7c; }
 .bad-text { color: #ff8f8f; }
 .live-delta {
@@ -834,6 +841,30 @@ html.big { font-size: 110%; }
 .citizen-reaction small { color: var(--sky); font-size: 8px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 @keyframes reaction-in { from { opacity: 0; transform: translateY(7px) scale(.92); } }
 @keyframes reaction-out { to { opacity: 0; transform: translateY(-4px); visibility: hidden; } }
+/* big, scene-anchored placement instruction — the Build sheet vanishes on tap, so
+   this is the player's guide to the 3D circles */
+.placement-cue {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  z-index: 9;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 9px 18px;
+  border: 1px solid rgba(157, 224, 124, 0.7);
+  border-radius: 999px;
+  background: rgba(21, 40, 26, 0.92);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45), 0 0 24px rgba(119, 227, 139, 0.28);
+  color: #d6ffc7;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  animation: cue-pulse 1.3s ease-in-out infinite;
+}
+@keyframes cue-pulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.045); } }
+@media (prefers-reduced-motion: reduce) { .placement-cue { animation: none; } }
 .placement-bar {
   position: absolute;
   left: 50%;

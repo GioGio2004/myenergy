@@ -66,6 +66,7 @@ interface Store {
   closeActSplash(): void
   clearRejection(): void
   newGame(region: RegionId): void
+  startDemo(act: 2 | 3): void
   continueGame(): Promise<void>
   dispatch(action: GameAction): void
 }
@@ -105,8 +106,13 @@ export const useStore = create<Store>((set, get) => ({
 
   async boot() {
     const q = urlParams()
-    if (new URLSearchParams(window.location.search).get('big') === '1') {
-      document.documentElement.classList.add('big') // demo laptop font bump (docs/03 §10)
+    // Demo legibility: bump fonts on wide screens by default (was ?big=1 only, which
+    // no judge would type). ?big=0 opts out for tight layouts.
+    if (
+      new URLSearchParams(window.location.search).get('big') !== '0' &&
+      (new URLSearchParams(window.location.search).get('big') === '1' || window.matchMedia('(min-width: 1200px)').matches)
+    ) {
+      document.documentElement.classList.add('big')
     }
     if (q.act === '2' || q.act === '3') {
       // Judge mode: deterministic prepared midgame (docs/03 §10)
@@ -188,6 +194,13 @@ export const useStore = create<Store>((set, get) => ({
     const state = createInitialState(seed, region)
     set({ state, screen: 'game', viewRegion: region, lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null })
     saveRepo.persist(state).catch(() => {})
+  },
+
+  // Demo shortcut: jump straight into a prepared Act II mid-game (deterministic
+  // balanced bot), where the Namakhvani/HPP decision is one tap away. For pitches.
+  startDemo(act: 2 | 3) {
+    const state = judgeMidgame(JUDGE_SEED, JUDGE_REGION, act)
+    set({ state, screen: 'game', viewRegion: state.regions[0], actSplash: act, lastRejection: null, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, lastChange: null })
   },
 
   async continueGame() {

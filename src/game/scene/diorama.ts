@@ -53,6 +53,7 @@ export interface DioramaInteraction {
 interface DioramaHandlers {
   onSlotSelect?(slot: number): void
   onPlantSelect?(plantId: number): void
+  onOccupiedSlot?(): void
 }
 
 // A looper travels a closed elliptical route forever — parametrised by u∈[0,1),
@@ -536,7 +537,8 @@ export class Diorama {
         const available = !occupied.has(i)
         const [x, z] = SLOT_POS[i] ?? [0, 0]
         const marker = makeSlotMarker(available)
-        marker.position.set(x, ground(x, z) + 0.08, z)
+        // lift clear of the water table so river/HES slots aren't half-submerged
+        marker.position.set(x, Math.max(ground(x, z), -0.12) + 0.12, z)
         marker.userData.slot = i
         marker.userData.available = available
         this.markerGroup.add(marker)
@@ -623,6 +625,7 @@ export class Diorama {
     this.renderer.domElement.style.cursor = markerAvailable || plantId !== null ? 'pointer' : ''
     if (!commit) return
     if (markerAvailable && markerHit) this.handlers.onSlotSelect?.(markerHit.userData.slot as number)
+    else if (markerHit) this.handlers.onOccupiedSlot?.() // tapped a taken plot — give feedback
     else if (plantId !== null) this.handlers.onPlantSelect?.(plantId)
   }
 
@@ -640,6 +643,18 @@ export class Diorama {
         return
       }
       for (const blade of this.blades) blade.rotation.z = time * 0.004
+      // pulse + bob the placement beacons so "tap here" is unmissable
+      if (this.markerGroup.children.length) {
+        const bob = Math.sin(time * 0.005)
+        for (const m of this.markerGroup.children) {
+          const beacon = (m as THREE.Group).getObjectByName('beacon')
+          if (beacon) {
+            beacon.position.y = 0.06 + bob * 0.06
+            const s = 1 + bob * 0.12
+            beacon.scale.set(s, 1, s)
+          }
+        }
+      }
       if (this.water) {
         this.water.position.y = -0.16 + Math.sin(time * 0.0011) * 0.014
         const wm = this.water.material as THREE.MeshStandardMaterial

@@ -26,6 +26,9 @@ export function DioramaView() {
         store.setPanel(null)
         store.selectPlant(plantId)
       },
+      onOccupiedSlot() {
+        useStore.setState({ lastRejection: 'rejSlotTaken' }) // toast: this plot is taken
+      },
     })
     const sync = (store: ReturnType<typeof useStore.getState>) => {
       if (!store.state) return

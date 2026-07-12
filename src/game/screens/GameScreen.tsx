@@ -1,5 +1,5 @@
 import { useStore } from '../../store'
-import { regionById } from '../../engine/data'
+import { regionById, REGIONS } from '../../engine/data'
 import { Hud } from '../hud/Hud'
 import { ActionBar } from '../hud/ActionBar'
 import { BuildPanel } from '../hud/BuildPanel'
@@ -26,7 +26,7 @@ export function GameScreen() {
     useStore()
   if (!state) return null
   const active = regionById(viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0])
-  const canExpand = state.act >= 2 && state.regions.length < 2 && !state.gameOver
+  const canExpand = state.act >= 2 && state.regions.length < REGIONS.length && !state.gameOver
   return (
     <div className="screen game-screen">
       <Hud />
@@ -53,6 +53,11 @@ export function GameScreen() {
           )}
           {!panel && !placement && !selectedPlantId && state.plants.length > 0 && (
             <span className="scene-hint">⌖ {t('selectAssetHint', lang)}</span>
+          )}
+          {placement && (
+            <div className="placement-cue" role="status" aria-live="polite">
+              👇 {t('placementCue', lang)}
+            </div>
           )}
           <CitizenReaction />
         </div>

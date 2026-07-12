@@ -52,6 +52,9 @@ export function Hud() {
         <div className="mission-ribbon">
           <small>🎯 {t('missionTitle', lang)}</small>
           <strong>{t(MISSION_KEY[state.act], lang)}</strong>
+          {state.act === 1 && (
+            <span className="mission-progress">{state.actProgress}/3 {t('coveredStreakLabel', lang)}</span>
+          )}
         </div>
         <div className="hud-controls">
           <span className="season-badge">{SEASON_ICON[season]} {t(SEASON_KEY[season], lang)} · {state.turn}</span>
@@ -88,7 +91,7 @@ export function Hud() {
             className="vital-sub"
             title={`🌿 ${Math.round(f.gen).toLocaleString()} + 🔋 ${Math.round(f.storageAvail).toLocaleString()} + 🔥 ${Math.round(f.peakerAvail).toLocaleString()} / ${Math.round(need).toLocaleString()} MWh`}
           >
-            🌿{Math.round(f.gen).toLocaleString()} + 🔋{Math.round(f.storageAvail).toLocaleString()} + 🔥{Math.round(f.peakerAvail).toLocaleString()} / {Math.round(need).toLocaleString()} MWh
+            {t('supplyLabel', lang)} {Math.round(f.gen + f.storageAvail + f.peakerAvail).toLocaleString()} / {t('demand', lang)} {Math.round(need).toLocaleString()} MWh
           </span>
         </div>
         <div className="vital-card">

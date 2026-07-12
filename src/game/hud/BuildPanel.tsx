@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { useStore } from '../../store'
 import { BUILDABLE_TEXT, pick, t } from '../../engine/strings'
 import type { StringKey } from '../../engine/strings'
@@ -43,6 +44,8 @@ export function BuildPanel() {
   if (!state) return null
   const region = viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0]
   const rdef = D.regionById(region)
+  const ROMAN = ['I', 'II', 'III']
+  let lastAct = 0
 
   return (
     <section className="panel">
@@ -51,6 +54,8 @@ export function BuildPanel() {
       <div className="panel-list">
         {ORDER.map((id) => {
           const def = D.BUILDABLES[id]
+          const showHeader = def.act !== lastAct
+          lastAct = def.act
           const text = BUILDABLE_TEXT[id]
           // HPP goes through the Namakhvani interstitial; its row gates on rush
           // feasibility (money/water/track/slot) — the interstitial shows the rest.
@@ -63,7 +68,11 @@ export function BuildPanel() {
           const starter = state.turn === 1 && state.plants.length === 0 && id === 'commsolar' && !rej
 
           return (
-            <div key={id} className={`build-row ${rej ? 'locked' : ''} ${starter ? 'starter-choice' : ''}`}>
+            <Fragment key={id}>
+              {showHeader && (
+                <div className="build-act-header">{t('act', lang)} {ROMAN[def.act - 1]}</div>
+              )}
+              <div className={`build-row ${rej ? 'locked' : ''} ${starter ? 'starter-choice' : ''}`}>
               <button
                 className="build-main"
                 onClick={() => {
@@ -98,7 +107,8 @@ export function BuildPanel() {
                 </span>
                 {!rej && <span className="build-cta">{def.slot ? `⌖ ${t('placeOnMap', lang)}` : `+ ${t('buildNow', lang)}`}</span>}
               </button>
-            </div>
+              </div>
+            </Fragment>
           )
         })}
       </div>

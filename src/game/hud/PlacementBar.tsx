@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useStore } from '../../store'
 import { BUILDABLE_TEXT, pick, t } from '../../engine/strings'
 import { BUILDABLES, regionById } from '../../engine/data'
@@ -5,6 +6,12 @@ import { effectiveCost, slotOccupied } from '../../engine/engine'
 
 export function PlacementBar() {
   const { lang, state, placement, cancelPlacement } = useStore()
+  // Escape cancels placement — a standard affordance the bar's Cancel button implies
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && cancelPlacement()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [cancelPlacement])
   if (!state || !placement) return null
   const def = BUILDABLES[placement.buildable]
   const text = BUILDABLE_TEXT[placement.buildable]
