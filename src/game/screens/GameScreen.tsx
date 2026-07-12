@@ -19,16 +19,28 @@ import { AssetInspector } from '../hud/AssetInspector'
 import { CitizenReaction } from '../hud/CitizenReaction'
 import { FirstMissionCoach } from '../hud/FirstMissionCoach'
 import { DioramaView } from '../scene/DioramaView'
-import { EVENT_TEXT, pick, t } from '../../engine/strings'
+import { BUILDABLE_TEXT, EVENT_TEXT, pick, t } from '../../engine/strings'
 
 export function GameScreen() {
-  const { lang, state, viewRegion, placement, selectedPlantId, panel, summaryOpen, hppOpen, actSplash, expandOpen, mapOpen, nationalMapOpen, setExpandOpen, setNationalMapOpen } =
+  const { lang, state, viewRegion, placement, selectedPlantId, panel, summaryOpen, hppOpen, actSplash, expandOpen, mapOpen, nationalMapOpen, cinematic, setExpandOpen, setNationalMapOpen, setCinematic, setPanel } =
     useStore()
   if (!state) return null
   const active = regionById(viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0])
   const canExpand = state.act >= 2 && state.regions.length < REGIONS.length && !state.gameOver
+  const building = state.plants.filter((p) => p.region === active.id && p.turnsLeft > 0)
   return (
-    <div className="screen game-screen">
+    <div className={`screen game-screen${cinematic ? ' is-cinematic' : ''}`}>
+      <button
+        className="cinematic-toggle"
+        type="button"
+        onClick={() => setCinematic(!cinematic)}
+        aria-pressed={cinematic}
+        aria-label={t(cinematic ? 'cinematicExit' : 'cinematicEnter', lang)}
+        title={t(cinematic ? 'cinematicExit' : 'cinematicEnter', lang)}
+      >
+        <Icon name={cinematic ? 'eyeOff' : 'eye'} size={18} />
+        <span className="cinematic-toggle-label">{t(cinematic ? 'cinematicExit' : 'cinematicEnter', lang)}</span>
+      </button>
       <Hud />
       <main className="game-main">
         <div className="diorama-stack">
@@ -51,6 +63,15 @@ export function GameScreen() {
               ))}
             </div>
           )}
+          {building.length > 0 && (
+            <div className="construction-strip">
+              {building.map((p) => (
+                <span key={p.id} className="construction-chip">
+                  🏗 {pick(BUILDABLE_TEXT[p.type].name, lang)} · {t('etaReadyIn', lang)} {p.turnsLeft} {t('quartersShort', lang)}
+                </span>
+              ))}
+            </div>
+          )}
           {!panel && !placement && !selectedPlantId && state.plants.length > 0 && (
             <span className="scene-hint">⌖ {t('selectAssetHint', lang)}</span>
           )}
@@ -65,6 +86,13 @@ export function GameScreen() {
           <button className="btn expand-banner" onClick={() => setExpandOpen(true)}>
             🗺️ {t('expandBanner', lang)}
           </button>
+        )}
+        {panel && (
+          <div
+            className="panel-scrim"
+            onClick={() => setPanel(null)}
+            aria-hidden="true"
+          />
         )}
         {panel === 'build' && <BuildPanel />}
         {panel === 'trust' && <TrustPanel />}

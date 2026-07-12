@@ -55,6 +55,14 @@ export const MAT = {
   sea: new THREE.MeshStandardMaterial({ color: 0x2b7fa0, roughness: 0.12, metalness: 0.45, emissive: 0x0a3a48, emissiveIntensity: 0.35, transparent: true, opacity: 0.9, depthWrite: false }),
   soil: toon(0x7a5f48),
   ghost: new THREE.MeshToonMaterial({ color: 0xd8cdb4, transparent: true, opacity: 0.45 }),
+  // construction-site kit: orange safety cones, amber hazard tape, steel rebar,
+  // and bright unlit ETA pips that read at a glance even against a dark blackout.
+  cone: new THREE.MeshStandardMaterial({ color: 0xf0752a, roughness: 0.55, flatShading: true }),
+  coneStripe: new THREE.MeshBasicMaterial({ color: 0xf7f0e2, toneMapped: false }),
+  hazard: new THREE.MeshBasicMaterial({ color: 0xf2a541, toneMapped: false }),
+  rebar: new THREE.MeshStandardMaterial({ color: 0x8a8272, roughness: 0.7, metalness: 0.3, flatShading: true }),
+  etaDone: new THREE.MeshBasicMaterial({ color: 0x77e38b, toneMapped: false }),
+  etaPending: new THREE.MeshBasicMaterial({ color: 0xf2a541, toneMapped: false }),
   markerAvailable: new THREE.MeshBasicMaterial({ color: 0x77e38b, transparent: true, opacity: 0.92, side: THREE.DoubleSide }),
   // Beacon draws OVER terrain/water (depthTest:false) so a slot is never half-hidden
   // behind a hill or the river — the "tap here" affordance.
@@ -488,6 +496,145 @@ export function makeDam(big: boolean): THREE.Group {
     house.position.set(w / 2 - 0.3, h - 0.15, 0)
     g.add(house)
   }
+  return g
+}
+
+export type ConstructionSize = 'small' | 'medium' | 'large'
+
+// A readable "under construction" site: fenced dirt pad with hazard tape + safety
+// cones, a scaffold cage around a concrete shell that RISES with progress, a
+// rotating tower crane whose hook hangs from a real cable (the jib is named
+// 'crane' so the diorama slews it), and a floating row of ETA pips above — one per
+// build-quarter, green = poured, amber = still to go — so "N quarters left" reads
+// at a glance without opening anything. Bigger buildables get a bigger site.
+const CONSTRUCTION_DIMS: Record<ConstructionSize, { pad: number; mast: number; jib: number; struct: number }> = {
+  small: { pad: 0.55, mast: 1.05, jib: 0.72, struct: 0.44 },
+  medium: { pad: 0.92, mast: 1.55, jib: 1.12, struct: 0.76 },
+  large: { pad: 1.35, mast: 2.15, jib: 1.7, struct: 1.18 },
+}
+
+function makeCone(scale: number): THREE.Group {
+  const c = new THREE.Group()
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 10), MAT.cone)
+  body.position.y = 0.08
+  body.castShadow = true
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 0.14), MAT.cone)
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.058, 0.03, 10), MAT.coneStripe)
+  band.position.y = 0.075
+  c.add(base, body, band)
+  c.scale.setScalar(scale)
+  return c
+}
+
+export function makeConstructionSite(size: ConstructionSize, totalTurns: number, turnsLeft: number): THREE.Group {
+  const d = CONSTRUCTION_DIMS[size]
+  const total = Math.max(1, totalTurns)
+  const left = Math.max(0, Math.min(total, turnsLeft))
+  const done = total - left
+  const p = Math.max(0.08, Math.min(1, (done + 0.35) / total)) // shell height: some progress even on day one
+  const g = new THREE.Group()
+  const half = d.pad // scaffold/pad half-extent
+
+  // dirt pad
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(d.pad * 1.15, d.pad * 1.2, 0.08, 14), MAT.soil)
+  pad.position.y = 0.04
+  pad.receiveShadow = true
+  g.add(pad)
+
+  // hazard-tape barrier ring at the pad edge — universal "keep out, work zone"
+  const tape = new THREE.Mesh(new THREE.TorusGeometry(d.pad * 1.12, 0.022, 6, 24), MAT.hazard)
+  tape.rotation.x = -Math.PI / 2
+  tape.position.y = 0.17
+  g.add(tape)
+
+  // foundation slab + the concrete shell rising out of it (height ∝ progress)
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(half * 1.5, 0.08, half * 1.5), MAT.concrete)
+  slab.position.y = 0.11
+  slab.receiveShadow = true
+  g.add(slab)
+  const sh = d.struct * p
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(half * 1.15, sh, half * 1.15), MAT.concrete)
+  shell.position.y = 0.15 + sh / 2
+  shell.castShadow = true
+  g.add(shell)
+  // exposed rebar sprouting from the top of the poured level
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 4), MAT.rebar)
+    bar.position.set(sx * half * 0.5, 0.15 + sh + 0.09, sz * half * 0.5)
+    g.add(bar)
+  }
+
+  // scaffold cage: 4 corner poles joined by horizontal cross-bars at two heights
+  const scaffH = d.mast * 0.62
+  const corners: Array<[number, number]> = [[-half, -half], [half, -half], [half, half], [-half, half]]
+  for (const [cx, cz] of corners) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, scaffH, 5), MAT.pylon)
+    pole.position.set(cx, scaffH / 2 + 0.08, cz)
+    pole.castShadow = true
+    g.add(pole)
+  }
+  for (let c = 0; c < 4; c++) {
+    const [ax, az] = corners[c]
+    const [bx, bz] = corners[(c + 1) % 4]
+    for (const ry of [scaffH * 0.5, scaffH]) {
+      const len = Math.hypot(bx - ax, bz - az)
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(len, 0.02, 0.02), MAT.pylon)
+      bar.position.set((ax + bx) / 2, ry + 0.08, (az + bz) / 2)
+      bar.rotation.y = Math.atan2(bx - ax, bz - az) + Math.PI / 2
+      g.add(bar)
+    }
+  }
+
+  // safety cones around the pad
+  const cones = size === 'large' ? 5 : 3
+  for (let i = 0; i < cones; i++) {
+    const ang = (i / cones) * Math.PI * 2 + 0.4
+    const cone = makeCone(size === 'small' ? 0.85 : 1.1)
+    cone.position.set(Math.cos(ang) * d.pad * 1.12, 0.08, Math.sin(ang) * d.pad * 1.12)
+    g.add(cone)
+  }
+
+  // tower crane in a back corner: mast + slewing jib (named 'crane') + cabled hook
+  const mx = -d.pad * 0.75
+  const mz = -d.pad * 0.75
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, d.mast, 6), MAT.industrial)
+  mast.position.set(mx, d.mast / 2, mz)
+  mast.castShadow = true
+  g.add(mast)
+  const jib = new THREE.Group()
+  jib.name = 'crane'
+  jib.position.set(mx, d.mast, mz)
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(d.jib, 0.05, 0.06), MAT.batteryStripe)
+  arm.position.x = d.jib * 0.3
+  jib.add(arm)
+  const counter = new THREE.Mesh(new THREE.BoxGeometry(d.jib * 0.42, 0.05, 0.06), MAT.industrial)
+  counter.position.x = -d.jib * 0.24
+  const cWeight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.1), MAT.concrete)
+  cWeight.position.set(-d.jib * 0.42, -0.02, 0)
+  jib.add(counter, cWeight)
+  // hook on a real cable near the far end of the jib (fixes the "floating cube")
+  const hookX = d.jib * 0.6
+  const cableLen = 0.2 + (1 - p) * (d.mast * 0.45)
+  const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, cableLen, 4), MAT.rebar)
+  cable.position.set(hookX, -cableLen / 2, 0)
+  const hook = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.11), MAT.concrete)
+  hook.position.set(hookX, -cableLen - 0.04, 0)
+  hook.castShadow = true
+  jib.add(cable, hook)
+  g.add(jib)
+
+  // floating ETA pips above the site — one per build-quarter (green done / amber left)
+  const pipRow = new THREE.Group()
+  const gap = 0.19
+  const startX = -((total - 1) * gap) / 2
+  for (let i = 0; i < total; i++) {
+    const pip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), i < done ? MAT.etaDone : MAT.etaPending)
+    pip.position.x = startX + i * gap
+    pipRow.add(pip)
+  }
+  pipRow.position.set(0, d.mast + 0.55, 0)
+  g.add(pipRow)
+
   return g
 }
 

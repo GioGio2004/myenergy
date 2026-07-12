@@ -9,6 +9,7 @@ export type IconName =
   | 'money' | 'power' | 'people' | 'happy' | 'jobs' | 'clean'
   | 'trust' | 'leaf' | 'bolt' | 'factory' | 'battery'
   | 'check' | 'lock' | 'star' | 'warn' | 'info' | 'handshake' | 'map'
+  | 'eye' | 'eyeOff' | 'home'
 
 interface IconProps {
   name: IconName
@@ -123,6 +124,26 @@ const PATHS: Record<IconName, ReactElement> = {
     <>
       <path d="M9 4.5 3.5 6.5v13L9 17.5l6 2 5.5-2v-13l-5.5 2-6-2Z" />
       <path d="M9 4.5v13M15 6.5v13" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3.2" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path d="M4 12s3.2-6.5 8-6.5c1.6 0 3 .5 4.2 1.2M20 12s-3.2 6.5-8 6.5c-1.5 0-2.9-.4-4.1-1.1" />
+      <path d="M9.7 9.7a3.2 3.2 0 0 0 4.6 4.5" />
+      <path d="M3.5 3.5 20.5 20.5" />
+    </>
+  ),
+  home: (
+    <>
+      <path d="M3.5 11 12 4l8.5 7" />
+      <path d="M5.5 9.5V20h13V9.5" />
+      <path d="M9.8 20v-5.4h4.4V20" />
     </>
   ),
 }

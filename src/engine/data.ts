@@ -95,6 +95,17 @@ export const POPULATION_PER_COVERED_QUARTER = 55
 export const BASE_JOBS = 90
 export const LOCAL_HIRING_JOBS = 70
 export const REVENUE_SHARE_HAPPINESS = 5
+
+// ---- Workforce / staffing (V3: "energy needs people, not just concrete") -----
+// Every operational plant needs workers (≈ its JOBS_BY_BUILDABLE). A region has a
+// labour pool that GROWS as it prospers and hires locally. Pack a region with
+// generators but neglect its people and the pool can't run them — output drops.
+// This is what stops "build one big plant and coast": you must keep developing
+// (trust → prosperity → population, or the hiring policy) to staff what you build.
+export const BASE_WORKFORCE = 120 // workers available before any prosperity/hiring
+export const WORKFORCE_PER_PROSPERITY = 62 // each prosperity level adds this many workers
+export const HIRING_WORKFORCE = 95 // the local-hiring policy adds a one-off labour boost
+export const STAFFING_FLOOR = 0.55 // output never falls below this from understaffing alone
 export const JOBS_BY_BUILDABLE: Record<BuildableId, number> = {
   rooftop: 4,
   gig: 0,
@@ -268,23 +279,23 @@ export const BUILDABLES: Record<BuildableId, BuildableDef> = {
   // rooftop & gaspeaker sit in the village, not on siting slots (DECISIONS.md)
   rooftop: { id: 'rooftop', act: 1, cost: 10000, share: 1, slot: null, kind: 'solar', baseOutput: 8, upkeep: 0, maxPerRegion: 6 },
   gig: { id: 'gig', act: 1, cost: GIG_COST, share: 1, slot: null, kind: 'infra', baseOutput: 0, upkeep: 0 },
-  commsolar: { id: 'commsolar', act: 1, cost: 60000, share: 1, slot: 'field', kind: 'solar', baseOutput: 140, upkeep: 500, needsTrust: 50, trustOnBuild: 3 },
+  commsolar: { id: 'commsolar', act: 1, cost: 60000, share: 1, slot: 'field', kind: 'solar', baseOutput: 140, upkeep: 700, needsTrust: 50, trustOnBuild: 3, buildTurns: 1 },
   // Small run-of-river HES — every region has a stream (river site), so it's the
   // universal clean starter. Cheap & fully yours, but no reservoir → dies in winter.
-  smallhydro: { id: 'smallhydro', act: 1, cost: 85000, share: 1, slot: 'river', kind: 'hydro', baseOutput: 380, upkeep: 900, runOfRiver: true, maxPerRegion: 2 },
-  turbine: { id: 'turbine', act: 1, cost: 120000, share: 1, slot: 'ridge', kind: 'wind', baseOutput: 320, upkeep: 1500, needsTrust: 55, needsWind: 6 },
-  gaspeaker: { id: 'gaspeaker', act: 1, cost: 40000, share: 1, slot: null, kind: 'gas', baseOutput: GAS_PEAKER_CAP, upkeep: 800, maxPerRegion: 1 },
-  solarfarm: { id: 'solarfarm', act: 1, cost: 300000, share: 0.6, slot: 'field', kind: 'solar', baseOutput: 1300, upkeep: 4000, needsTrust: 60, needsTrack: 500, ppaPrice: 0.28 },
+  smallhydro: { id: 'smallhydro', act: 1, cost: 85000, share: 1, slot: 'river', kind: 'hydro', baseOutput: 380, upkeep: 1250, runOfRiver: true, maxPerRegion: 2, buildTurns: 1 },
+  turbine: { id: 'turbine', act: 1, cost: 120000, share: 1, slot: 'ridge', kind: 'wind', baseOutput: 320, upkeep: 2000, needsTrust: 55, needsWind: 6, buildTurns: 1 },
+  gaspeaker: { id: 'gaspeaker', act: 1, cost: 40000, share: 1, slot: null, kind: 'gas', baseOutput: GAS_PEAKER_CAP, upkeep: 1100, maxPerRegion: 1, buildTurns: 1 },
+  solarfarm: { id: 'solarfarm', act: 1, cost: 300000, share: 0.6, slot: 'field', kind: 'solar', baseOutput: 1300, upkeep: 5400, needsTrust: 60, needsTrack: 500, ppaPrice: 0.28, buildTurns: 2 },
   // Medium regulated HES — only where the rivers are genuinely strong (water ≥ 6:
   // Imereti, Racha, Adjara, Samegrelo). Bigger and steadier through winter than run-of-river.
-  mediumhydro: { id: 'mediumhydro', act: 2, cost: 450000, share: 0.6, slot: 'river', kind: 'hydro', baseOutput: 2200, upkeep: 5500, needsTrust: 60, needsWater: 6, needsTrack: 1500 },
-  windfarm: { id: 'windfarm', act: 2, cost: 900000, share: 0.5, slot: 'ridge', kind: 'wind', baseOutput: 3800, upkeep: 12000, needsTrust: 65, needsWind: 7, needsTrack: 1500 },
-  battery: { id: 'battery', act: 1, cost: 150000, share: 1, slot: null, kind: 'storage', baseOutput: 250, upkeep: 1000, needsAnyFarm: true, maxPerRegion: 2 },
-  pumpedhydro: { id: 'pumpedhydro', act: 2, cost: 400000, share: 0.6, slot: 'river', kind: 'storage', baseOutput: 800, upkeep: 2500, needsWater: 7, needsTrust: 60 },
-  translink: { id: 'translink', act: 2, cost: 250000, share: 0.7, slot: null, kind: 'infra', baseOutput: 0, upkeep: 2000, maxPerRegion: 1 },
-  hpp: { id: 'hpp', act: 2, cost: 2000000, share: 0.25, slot: 'river', kind: 'hydro', baseOutput: 6500, upkeep: 15000, needsTrust: HPP_TRUST_BASE, needsWater: 7, needsTrack: 3000, buildTurns: 2 },
-  offshore: { id: 'offshore', act: 3, cost: 1200000, share: 0.4, slot: 'coast', kind: 'offshore', baseOutput: 4200, upkeep: 18000, needsTrust: 70, needsTrack: 4000, needsCoast: true },
-  cableshare: { id: 'cableshare', act: 3, cost: 1500000, share: 0.15, slot: null, kind: 'infra', baseOutput: 0, upkeep: 5000, needsTrack: 6000, needsDependenceBelow: 40, needsCoast: true, maxPerRegion: 1 },
+  mediumhydro: { id: 'mediumhydro', act: 2, cost: 450000, share: 0.6, slot: 'river', kind: 'hydro', baseOutput: 2200, upkeep: 7500, needsTrust: 60, needsWater: 6, needsTrack: 1500, buildTurns: 2 },
+  windfarm: { id: 'windfarm', act: 2, cost: 900000, share: 0.5, slot: 'ridge', kind: 'wind', baseOutput: 3800, upkeep: 16000, needsTrust: 65, needsWind: 7, needsTrack: 1500, buildTurns: 2 },
+  battery: { id: 'battery', act: 1, cost: 150000, share: 1, slot: null, kind: 'storage', baseOutput: 250, upkeep: 1400, needsAnyFarm: true, maxPerRegion: 2, buildTurns: 1 },
+  pumpedhydro: { id: 'pumpedhydro', act: 2, cost: 400000, share: 0.6, slot: 'river', kind: 'storage', baseOutput: 800, upkeep: 3400, needsWater: 7, needsTrust: 60, buildTurns: 2 },
+  translink: { id: 'translink', act: 2, cost: 250000, share: 0.7, slot: null, kind: 'infra', baseOutput: 0, upkeep: 2700, maxPerRegion: 1, buildTurns: 1 },
+  hpp: { id: 'hpp', act: 2, cost: 2000000, share: 0.25, slot: 'river', kind: 'hydro', baseOutput: 6500, upkeep: 20000, needsTrust: HPP_TRUST_BASE, needsWater: 7, needsTrack: 3000, buildTurns: 2 },
+  offshore: { id: 'offshore', act: 3, cost: 1200000, share: 0.4, slot: 'coast', kind: 'offshore', baseOutput: 4200, upkeep: 24000, needsTrust: 70, needsTrack: 4000, needsCoast: true, buildTurns: 2 },
+  cableshare: { id: 'cableshare', act: 3, cost: 1500000, share: 0.15, slot: null, kind: 'infra', baseOutput: 0, upkeep: 6800, needsTrack: 6000, needsDependenceBelow: 40, needsCoast: true, maxPerRegion: 1, buildTurns: 1 },
 }
 
 export const SLOT_QUALITY_MULT: Record<1 | 2 | 3, number> = { 1: 0.6, 2: 1.0, 3: 1.3 }

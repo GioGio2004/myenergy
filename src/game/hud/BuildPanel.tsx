@@ -45,17 +45,15 @@ export function BuildPanel() {
   const region = viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0]
   const rdef = D.regionById(region)
   const ROMAN = ['I', 'II', 'III']
-  let lastAct = 0
 
   return (
     <section className="panel">
       <h3 className="panel-title">🏗 {t('buildPanelTitle', lang)}</h3>
       <RegionTabs value={region} onChange={setViewRegion} />
       <div className="panel-list">
-        {ORDER.map((id) => {
+        {ORDER.map((id, idx) => {
           const def = D.BUILDABLES[id]
-          const showHeader = def.act !== lastAct
-          lastAct = def.act
+          const showHeader = def.act !== (idx > 0 ? D.BUILDABLES[ORDER[idx - 1]].act : 0)
           const text = BUILDABLE_TEXT[id]
           // HPP goes through the Namakhvani interstitial; its row gates on rush
           // feasibility (money/water/track/slot) — the interstitial shows the rest.
@@ -97,6 +95,7 @@ export function BuildPanel() {
                     {def.baseOutput > 0 &&
                       ` · ${isStorage ? t('storesLabel', lang) : t('outputLabel', lang)} ${def.baseOutput} ${isStorage ? 'MWh' : t('mwhPerQuarter', lang)}`}
                     {def.upkeep > 0 && ` · ${t('upkeepLabel', lang)} ₾${Math.round(def.upkeep * def.share).toLocaleString()}`}
+                    {def.buildTurns !== undefined && def.buildTurns > 0 && ` · 🕑 ${def.buildTurns} ${t('quartersShort', lang)}`}
                   </span>
                   {def.slot && !rej && (
                     <span className="build-sites">

@@ -134,6 +134,23 @@ export function slotOccupied(state: GameState, region: RegionId, slot: number): 
   return state.plants.some((p) => p.region === region && p.slot === slot)
 }
 
+/** Share of a region's operational plants the local labour pool can actually run
+ *  (0.55–1). Pool grows with prosperity + the hiring policy; demand is the sum of
+ *  every operational plant's staffing need. Understaffing throttles output — the
+ *  mechanic that makes neglecting your people (not just your grid) cost you. */
+export function regionStaffing(state: GameState, region: RegionId): number {
+  const rs = state.regionState[region]
+  if (!rs) return 1
+  let demand = 0
+  for (const p of state.plants) {
+    if (p.region !== region || p.turnsLeft > 0) continue
+    demand += D.JOBS_BY_BUILDABLE[p.type]
+  }
+  if (demand <= 0) return 1
+  const pool = D.BASE_WORKFORCE + rs.prosperity * D.WORKFORCE_PER_PROSPERITY + (rs.hiring ? D.HIRING_WORKFORCE : 0)
+  return clamp(pool / demand, D.STAFFING_FLOOR, 1)
+}
+
 export function freeSlot(state: GameState, region: RegionId, type: BuildableId): number | null {
   const def = D.BUILDABLES[type]
   if (!def.slot) return null
@@ -266,7 +283,8 @@ export function cityStats(state: GameState, region: RegionId = state.regions[0])
   const projectedRevenue = Math.min(f.gen, need) * D.BASE_PRICE * 1000 * weightedShare * policyMult
   const projectedNet = Math.round(projectedRevenue - upkeep)
   const level = clamp(1 + rs.prosperity, 1, 5) as CityStats['level']
-  return { population: Math.round(population), jobs: Math.round(jobs), happiness, coverage, cleanShare, projectedRevenue: Math.round(projectedRevenue), projectedNet, level }
+  const staffing = regionStaffing(state, region)
+  return { population: Math.round(population), jobs: Math.round(jobs), happiness, coverage, cleanShare, projectedRevenue: Math.round(projectedRevenue), projectedNet, staffing, level }
 }
 
 export function hppRejection(state: GameState, region: RegionId, choice: 'rush' | 'right'): string | null {
@@ -512,7 +530,8 @@ function plantOutput(state: GameState, p: PlantInstance, season: Season): number
   const quality = p.slot !== null ? D.SLOT_QUALITY_MULT[D.regionById(p.region).slots[p.slot].stars] : 1
   const rs = state.regionState[p.region]!
   const awareness = rs.trust >= D.AWARENESS_TRUST ? D.AWARENESS_OUTPUT_MULT : 1
-  return def.baseOutput * mult * quality * awareness
+  const staffing = regionStaffing(state, p.region)
+  return def.baseOutput * mult * quality * awareness * staffing
 }
 
 function drawEvent(state: GameState, season: Season): { event: EventId | null; rng: number } {

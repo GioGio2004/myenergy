@@ -127,6 +127,7 @@ export interface CityStats {
   cleanShare: number // forecast renewable generation / demand, 0-100
   projectedRevenue: number // approximate gross next-quarter revenue, GEL
   projectedNet: number // approximate next-quarter operating result, GEL
+  staffing: number // 0–1: share of the region's plants that are fully staffed
   level: 1 | 2 | 3 | 4 | 5
 }
 

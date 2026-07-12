@@ -252,8 +252,12 @@ target('7 determinism', ok, ok ? 'replay identical' : 'replay diverged')
 
   let storageState: GameState = { ...removed.state, money: 2_000_000, trackMWh: 1_000 }
   storageState = reduce(storageState, { type: 'build', buildable: 'solarfarm', region: 'kakheti', slot: plant.slot ?? 0 }).state
+  // V3: builds take quarters to finish; the farm must be OPERATIONAL before storage
+  // (needsAnyFarm gates on built plants), so fast-forward its construction here.
+  storageState = { ...storageState, plants: storageState.plants.map((p) => ({ ...p, turnsLeft: 0 })) }
   const batteryBuild = reduce(storageState, { type: 'build', buildable: 'battery', region: 'kakheti' })
   storageState = batteryBuild.state
+  storageState = { ...storageState, plants: storageState.plants.map((p) => ({ ...p, turnsLeft: 0 })) }
   const battery = storageState.plants.find((p) => p.type === 'battery')
   if (battery) storageState = { ...storageState, storedMWh: storageCapacity(storageState) }
   const withoutBattery = battery ? reduce(storageState, { type: 'demolish', plantId: battery.id }).state : storageState

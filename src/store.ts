@@ -45,6 +45,7 @@ interface Store {
   expandOpen: boolean // second-region picker (Act II)
   mapOpen: boolean // world export map
   nationalMapOpen: boolean // zoom-out national map: switch region / expand
+  cinematic: boolean // "eye" immersive mode: hide all chrome, show only the island
   viewRegion: RegionId | null // region currently shown by the diorama
   placement: PlacementMode | null
   selectedPlantId: number | null
@@ -58,6 +59,7 @@ interface Store {
   setExpandOpen(open: boolean): void
   setMapOpen(open: boolean): void
   setNationalMapOpen(open: boolean): void
+  setCinematic(on: boolean): void
   setViewRegion(region: RegionId): void
   beginPlacement(buildable: BuildableId, region: RegionId): void
   cancelPlacement(): void
@@ -99,6 +101,7 @@ export const useStore = create<Store>((set, get) => ({
   expandOpen: false,
   mapOpen: false,
   nationalMapOpen: false,
+  cinematic: false,
   viewRegion: null,
   placement: null,
   selectedPlantId: null,
@@ -137,7 +140,7 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   setScreen(screen) {
-    set({ screen, panel: null, summaryOpen: false, placement: null, selectedPlantId: null })
+    set({ screen, panel: null, summaryOpen: false, placement: null, selectedPlantId: null, cinematic: false })
   },
 
   setPanel(panel) {
@@ -158,6 +161,13 @@ export const useStore = create<Store>((set, get) => ({
 
   setNationalMapOpen(open) {
     set({ nationalMapOpen: open })
+  },
+
+  // Immersive "eye" view: dropping into it closes any open chrome so nothing
+  // pops back over the bare island; leaving it restores the normal HUD.
+  setCinematic(on) {
+    if (on) set({ cinematic: true, panel: null, placement: null, selectedPlantId: null })
+    else set({ cinematic: false })
   },
 
   setViewRegion(region) {
