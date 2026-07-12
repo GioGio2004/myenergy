@@ -1,5 +1,7 @@
 import { useStore } from '../../store'
 import { t } from '../../engine/strings'
+import { Icon } from '../ui/Icon'
+import { HOME_URL } from '../../config'
 import hero from '../../assets/hero.png'
 
 export function TitleScreen() {
@@ -34,6 +36,14 @@ export function TitleScreen() {
       >
         {lang === 'ka' ? 'EN' : 'ქა'}
       </button>
+      <a
+        className="home-link"
+        href={HOME_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Icon name="home" size={15} /> {t('backToMyEnerge', lang)}
+      </a>
     </div>
   )
 }

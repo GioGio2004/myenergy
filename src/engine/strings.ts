@@ -291,6 +291,25 @@ const S = {
   runFirstQuarter: { ka: 'პირველი კვარტალის გაშვება', en: 'Run first quarter' },
   startHere: { ka: 'დაიწყე აქ', en: 'Start here' },
 
+  // ---------- V3: immersive view + home ----------
+  cinematicEnter: { ka: 'კუნძულის ხედი', en: 'Island view' },
+  cinematicExit: { ka: 'პანელების დაბრუნება', en: 'Show controls' },
+  homeLabel: { ka: 'MyEnerge — მთავარი', en: 'MyEnerge home' },
+  backToMyEnerge: { ka: 'MyEnerge-ზე დაბრუნება', en: 'Back to MyEnerge' },
+
+  // ---------- V3: construction & workforce ----------
+  buildTimeLabel: { ka: 'მშენებლობა', en: 'Build time' },
+  quartersShort: { ka: 'კვ.', en: 'q' },
+  constructionProgress: { ka: 'მშენებლობა მიმდინარეობს', en: 'Construction in progress' },
+  etaReadyIn: { ka: 'დასრულდება', en: 'Ready in' },
+  buildingNowLabel: { ka: 'შენდება', en: 'Building' },
+  workforceLabel: { ka: 'სამუშაო ძალა', en: 'Workforce' },
+  staffedLabel: { ka: 'დაკომპლექტება', en: 'Staffing' },
+  understaffedLabel: { ka: 'კადრები არ ჰყოფნის — გამომუშავება ეცემა', en: 'Understaffed — output is reduced' },
+  understaffedShort: { ka: 'კადრები არ ჰყოფნის', en: 'Understaffed' },
+  workforceHint: { ka: 'გაზარდე კეთილდღეობა და დაასაქმე ხალხი, რომ სადგურები სრულად იმუშაონ.', en: 'Grow prosperity and hire locally so your plants can run at full output.' },
+  effectiveOutputLabel: { ka: 'რეალური გამომუშავება', en: 'Effective output' },
+
   // ---------- rejection reasons (dev rules §4.4) ----------
   rejGameOver: { ka: 'თამაში დასრულდა', en: 'the game is over' },
   rejRegionLocked: { ka: 'რეგიონი ჯერ დაკეტილია', en: 'region not unlocked yet' },

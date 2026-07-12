@@ -4,6 +4,8 @@ import { t } from '../../engine/strings'
 import { cityStats, forecast, seasonOf } from '../../engine/engine'
 import { regionById } from '../../engine/data'
 import { isMuted, setMuted } from '../../audio'
+import { Icon } from '../ui/Icon'
+import { HOME_URL } from '../../config'
 import type { CityStats, Season } from '../../engine/types'
 import type { StringKey } from '../../engine/strings'
 
@@ -71,6 +73,16 @@ export function Hud() {
           <button className="icon-control" onClick={() => setLang(lang === 'ka' ? 'en' : 'ka')}>
             {lang === 'ka' ? 'EN' : 'ქა'}
           </button>
+          <a
+            className="icon-control home-control"
+            href={HOME_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t('homeLabel', lang)}
+            aria-label={t('homeLabel', lang)}
+          >
+            <Icon name="home" size={16} />
+          </a>
         </div>
       </div>
 
@@ -109,6 +121,9 @@ export function Hud() {
           <span className="vital-icon">👷</span>
           <span className="vital-copy"><small>{t('jobsLabel', lang)}</small><b>{stats.jobs.toLocaleString()}</b></span>
           <Delta value={visibleChange?.jobs ?? 0} />
+          <span className={`vital-sub ${stats.staffing < 1 ? 'bad-text' : ''}`} title={stats.staffing < 1 ? t('workforceHint', lang) : undefined}>
+            {stats.staffing < 1 ? '⚠ ' : ''}{t('staffedLabel', lang)} {Math.round(stats.staffing * 100)}%
+          </span>
         </div>
         <div className="vital-card clean-vital">
           <span className="vital-icon">🌿</span>

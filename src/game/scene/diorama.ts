@@ -11,6 +11,7 @@ import {
   MAT,
   SLOT_POS,
   makeBattery,
+  makeConstructionSite,
   makeDam,
   makeGasPeaker,
   makeHouse,
@@ -25,7 +26,23 @@ import {
   getTerrainProfile,
   RIVER_X,
 } from './assets'
+import type { ConstructionSize } from './assets'
 import { seedFromString, rngNext } from '../../engine/rng'
+
+// Which construction-site scale a buildable uses while it's going up.
+const CONSTRUCTION_SIZE: Partial<Record<string, ConstructionSize>> = {
+  hpp: 'large',
+  offshore: 'large',
+  windfarm: 'medium',
+  solarfarm: 'medium',
+  mediumhydro: 'medium',
+  pumpedhydro: 'medium',
+  translink: 'medium',
+  cableshare: 'medium',
+}
+function constructionSize(type: string): ConstructionSize {
+  return CONSTRUCTION_SIZE[type] ?? 'small'
+}
 
 // Horizon band (also the fog color) per season.
 const SKY: Record<Season, number> = {
@@ -211,6 +228,7 @@ export class Diorama {
   private hemi: THREE.HemisphereLight
   private sun: THREE.DirectionalLight
   private blades: THREE.Group[] = []
+  private cranes: THREE.Group[] = []
   private loopers: Looper[] = []
   private groundAt: ((x: number, z: number) => number) | null = null
   private signature = ''
@@ -330,7 +348,7 @@ export class Diorama {
     const blackout = Boolean(state.lastReport?.blackoutRegions.includes(activeRegion))
     const plantsSig = state.plants
       .filter((p) => p.region === activeRegion)
-      .map((p) => `${p.type}:${p.slot}:${p.turnsLeft > 0 ? 'c' : 'b'}`)
+      .map((p) => `${p.type}:${p.slot}:${p.turnsLeft}`)
       .join(',')
     const placementSig = interaction.placement?.region === activeRegion ? interaction.placement.buildable : 'none'
     const stats = cityStats(state, activeRegion)
@@ -409,6 +427,7 @@ export class Diorama {
     // ---- plants on their slots ----
     this.disposeChildren(this.plantGroup)
     this.blades = []
+    this.cranes = []
     let rooftops = 0
     let villageExtras = 0
     for (const p of state.plants) {
@@ -505,18 +524,26 @@ export class Diorama {
       // hides them. The tall HPP still seats on the bed (it clears the water anyway).
       const shortRiverDam = p.type === 'smallhydro' || p.type === 'mediumhydro' || p.type === 'pumpedhydro'
       const y = p.type === 'offshore' ? -0.16 : shortRiverDam ? -0.13 : ground(pos[0], pos[1])
-      mesh.position.set(pos[0], y, pos[1])
-      mesh.traverse((o) => {
-        o.userData.plantId = p.id
-        if (o instanceof THREE.Mesh) o.castShadow = true
-      })
+
+      // Under construction → a rising building site (crane + scaffolding + shell)
+      // in place of the finished asset. The site sits on/above the waterline so
+      // river-slot projects don't sink out of view while they go up.
+      let display: THREE.Group = mesh
       if (p.turnsLeft > 0) {
-        // under construction: ghosted
-        mesh.traverse((o) => {
-          if (o instanceof THREE.Mesh) o.material = MAT.ghost
+        const total = BUILDABLES[p.type].buildTurns ?? 1
+        display = makeConstructionSite(constructionSize(p.type), total, p.turnsLeft)
+        const siteY = p.type === 'offshore' ? -0.05 : Math.max(ground(pos[0], pos[1]), -0.05)
+        display.position.set(pos[0], siteY, pos[1])
+        display.traverse((o) => {
+          o.userData.plantId = p.id
+          if (o instanceof THREE.Mesh) o.castShadow = true
+          if (o.name === 'crane') this.cranes.push(o as THREE.Group)
         })
       } else {
+        mesh.position.set(pos[0], y, pos[1])
         mesh.traverse((o) => {
+          o.userData.plantId = p.id
+          if (o instanceof THREE.Mesh) o.castShadow = true
           if (o.name === 'blades') this.blades.push(o as THREE.Group)
         })
       }
@@ -525,9 +552,9 @@ export class Diorama {
         halo.scale.setScalar(1.45)
         halo.position.y = 0.06
         halo.userData.plantId = p.id
-        mesh.add(halo)
+        display.add(halo)
       }
-      this.plantGroup.add(mesh)
+      this.plantGroup.add(display)
     }
 
     // ---- construction plots: visible only when the player is placing ----
@@ -647,6 +674,8 @@ export class Diorama {
         return
       }
       for (const blade of this.blades) blade.rotation.z = time * 0.004
+      // tower cranes slew slowly back and forth — reads as active building work
+      for (const crane of this.cranes) crane.rotation.y = Math.sin(time * 0.0006) * 1.1
       // pulse + bob the placement beacons so "tap here" is unmissable
       if (this.markerGroup.children.length) {
         const bob = Math.sin(time * 0.005)

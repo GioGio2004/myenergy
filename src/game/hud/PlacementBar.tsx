@@ -24,7 +24,10 @@ export function PlacementBar() {
       <span className="placement-icon">{text.icon}</span>
       <span className="placement-copy">
         <small>{t('placementTitle', lang)}</small>
-        <b>{pick(text.name, lang)} · ₾{effectiveCost(state, placement.buildable, placement.region).toLocaleString()}</b>
+        <b>
+          {pick(text.name, lang)} · ₾{effectiveCost(state, placement.buildable, placement.region).toLocaleString()}
+          {def.buildTurns !== undefined && def.buildTurns > 0 && ` · 🕑 ${def.buildTurns} ${t('quartersShort', lang)}`}
+        </b>
         <em>
           {available.length > 0
             ? `${t('placementInstruction', lang)} · ${available.length}/${sites.length} ${t('sitesAvailable', lang)}`
