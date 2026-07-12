@@ -9,7 +9,7 @@ export type IconName =
   | 'money' | 'power' | 'people' | 'happy' | 'jobs' | 'clean'
   | 'trust' | 'leaf' | 'bolt' | 'factory' | 'battery'
   | 'check' | 'lock' | 'star' | 'warn' | 'info' | 'handshake' | 'map'
-  | 'eye' | 'eyeOff' | 'home'
+  | 'eye' | 'eyeOff' | 'home' | 'chevron' | 'menu'
 
 interface IconProps {
   name: IconName
@@ -146,6 +146,8 @@ const PATHS: Record<IconName, ReactElement> = {
       <path d="M9.8 20v-5.4h4.4V20" />
     </>
   ),
+  chevron: (<path d="M6 9.5 12 15.5 18 9.5" />),
+  menu: (<path d="M4 7h16M4 12h16M4 17h16" />),
 }
 
 // Solid-fill icons read better than stroke for these small glyphs.

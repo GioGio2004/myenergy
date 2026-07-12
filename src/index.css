@@ -182,16 +182,48 @@ body {
 .diorama-region { font-size: 26px; font-weight: 700; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); }
 .diorama-note { font-size: 13px; color: rgba(250, 243, 227, 0.75); }
 
+/* Mobile-first: the tools live behind a single "Actions" trigger so the bottom
+   bar is just [Actions] [Run quarter] — the individual tool buttons show only on
+   wide screens (see the min-width:900 block). */
 .action-bar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 8px;
   padding: 10px 12px calc(10px + var(--safe-b));
   background: rgba(26, 20, 35, 0.92);
   border-top: 1px solid rgba(250, 243, 227, 0.1);
 }
 .action-bar .btn { font-size: 14px; padding: 12px 6px; }
-.btn-endturn { grid-column: 1 / -1; font-size: 16px; }
+.action-tool { display: none; }
+.action-menu-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; }
+.action-menu-trigger .ui-icon { color: var(--sun); }
+.btn-endturn { flex: 1 1 auto; font-size: 16px; }
+
+/* Bottom drawer that holds Build / Trust / Market on phones. */
+.action-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(10, 7, 16, 0.5);
+  animation: scrimIn 140ms ease;
+}
+.action-drawer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 14px calc(16px + var(--safe-b));
+  background: rgba(30, 24, 38, 0.98);
+  border-top: 1px solid rgba(250, 243, 227, 0.14);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.42);
+  animation: drawerUp 200ms cubic-bezier(.2, .9, .3, 1);
+}
+@keyframes drawerUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.action-drawer-head { display: flex; align-items: center; justify-content: space-between; }
+.action-drawer-head strong { color: var(--cream); font-size: 15px; }
+.action-drawer-item { text-align: left; min-height: 54px; font-size: 15px; }
 
 /* ---------- HUD extras (M2) ---------- */
 .hud-lang { font: inherit; font-size: 12px; border: 1px solid rgba(250,243,227,0.25); color: var(--cream); cursor: pointer; margin-left: auto; background: rgba(250,243,227,0.07); border-radius: 99px; padding: 5px 10px; }
@@ -772,7 +804,25 @@ html.big { font-size: 110%; }
 /* objective must always be fully readable — wrap instead of truncating */
 .mission-ribbon strong { color: var(--cream); font-size: 12.5px; font-weight: 600; line-height: 1.25; }
 .mission-progress { flex-shrink: 0; margin-left: auto; padding: 2px 9px; border-radius: 999px; background: rgba(157, 224, 124, 0.16); color: #b8f0a0; font-size: 11px; font-weight: 800; white-space: nowrap; }
+/* Collapse toggle: hidden on desktop (see min-width:900), shown on phones. */
+.mission-toggle {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cream-dim);
+  cursor: pointer;
+}
+.mission-toggle .ui-icon { transition: transform 170ms ease; }
+.mission-ribbon.is-open .mission-toggle .ui-icon { transform: rotate(180deg); }
 .hud-controls { display: flex; align-items: center; gap: 6px; }
+.hud-eye { display: inline-flex; align-items: center; justify-content: center; }
 .season-badge { padding: 6px 9px; border-radius: 99px; color: var(--cream); background: rgba(250, 243, 227, 0.07); font-size: 11px; white-space: nowrap; }
 .icon-control {
   min-width: 36px;
@@ -1106,7 +1156,12 @@ html.big { font-size: 110%; }
     background: linear-gradient(180deg, rgba(26, 20, 35, 0.98), rgba(42, 33, 56, 0.96));
   }
   .action-bar .btn { min-height: 48px; padding: 11px 9px; font-size: 13px; text-align: left; }
-  .action-bar .btn-endturn { margin-top: auto; text-align: center; }
+  .action-bar .btn-endturn { flex: 0 0 auto; margin-top: auto; text-align: center; }
+  /* Wide screens keep the individual tool buttons; the phone-only trigger and
+     header eye disappear, and the floating eye stays as the cinematic control. */
+  .action-tool { display: block; }
+  .action-menu-trigger { display: none; }
+  .hud-eye { display: none; }
   .panel {
     top: 14px;
     right: 14px;
@@ -1147,6 +1202,19 @@ html.big { font-size: 110%; }
     scrollbar-width: none;
   }
   .city-vitals::-webkit-scrollbar { display: none; }
+  /* The verbose second line ("next-quarter…", "supply 0…") is what clipped —
+     drop it on phones and let the primary label wrap instead of truncating. */
+  .vital-sub { display: none; }
+  .vital-copy small { overflow: visible; white-space: normal; text-overflow: clip; line-height: 1.18; }
+  /* Mission ribbon becomes a collapsible strip (chevron reveals the objective). */
+  .mission-ribbon { flex-wrap: wrap; row-gap: 4px; }
+  .mission-ribbon strong { flex-basis: 100%; order: 5; margin-top: 1px; }
+  .mission-ribbon.is-collapsed strong { display: none; }
+  .mission-toggle { display: inline-flex; }
+  /* The "island view" eye now lives in the header; the floating pill only
+     survives to let you exit cinematic mode (when the header is hidden). */
+  .cinematic-toggle { display: none; }
+  .game-screen.is-cinematic .cinematic-toggle { display: inline-flex; }
 }
 
 @media (max-width: 720px) {
@@ -1158,7 +1226,7 @@ html.big { font-size: 110%; }
   .mission-ribbon strong { font-size: 10px; }
   .hud-controls { margin-left: auto; }
   .season-badge { padding-inline: 7px; font-size: 9px; }
-  .icon-control { min-width: 44px; height: 44px; padding-inline: 6px; }
+  .icon-control { min-width: 40px; height: 44px; padding-inline: 5px; }
   .city-vitals { grid-auto-columns: minmax(126px, 1fr); gap: 5px; }
   .vital-card { padding: 6px 7px; }
   .vital-icon { font-size: 18px; }
@@ -1166,10 +1234,13 @@ html.big { font-size: 110%; }
   .action-bar { gap: 6px; padding: 7px 8px calc(7px + var(--safe-b)); }
   .action-bar .btn { min-height: 44px; padding: 9px 4px; font-size: 12px; }
   .placement-bar { right: 9px; bottom: 9px; left: 9px; width: auto; transform: none; }
-  .first-mission-coach { top: 9px; right: 9px; left: 9px; width: auto; align-items: flex-start; flex-wrap: wrap; transform: none; }
-  .coach-mascot { width: 32px; height: 32px; }
-  .coach-copy { min-width: calc(100% - 48px); }
-  .first-mission-coach .btn { width: 100%; max-width: none; min-height: 44px; }
+  /* Slim single-row coach so it stops covering the map: mascot · copy · button. */
+  .first-mission-coach { top: 9px; right: 9px; left: 9px; width: auto; align-items: center; flex-wrap: nowrap; gap: 8px; padding: 8px 10px; transform: none; }
+  .coach-mascot { width: 30px; height: 30px; }
+  .coach-copy { min-width: 0; flex: 1; }
+  .first-mission-coach .btn { width: auto; max-width: none; min-height: 40px; flex: 0 0 auto; }
+  /* Placement banner must wrap inside the viewport instead of running off-screen. */
+  .placement-cue { white-space: normal; font-size: 13px; padding: 8px 14px; line-height: 1.3; }
   .placement-copy em { max-width: 46vw; }
   .asset-inspector { right: 9px; bottom: 9px; left: 9px; width: auto; }
   .panel { max-height: 70%; padding-bottom: calc(16px + var(--safe-b)); }

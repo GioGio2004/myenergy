@@ -31,8 +31,9 @@ function Delta({ value, suffix = '' }: { value: number; suffix?: string }) {
 }
 
 export function Hud() {
-  const { lang, state, viewRegion, lastChange, setLang } = useStore()
+  const { lang, state, viewRegion, lastChange, setLang, cinematic, setCinematic } = useStore()
   const [muted, setMutedUi] = useState(isMuted())
+  const [missionOpen, setMissionOpen] = useState(false)
   if (!state) return null
   const region = viewRegion && state.regions.includes(viewRegion) ? viewRegion : state.regions[0]
   const regionDef = regionById(region)
@@ -51,15 +52,35 @@ export function Hud() {
           <span className="city-region">{lang === 'ka' ? regionDef.nameKa : regionDef.nameEn}</span>
           <span className="city-level">★ {t('cityLevelLabel', lang)} {stats.level} · {t(LEVEL_KEY[stats.level], lang)}</span>
         </div>
-        <div className="mission-ribbon">
+        <div className={`mission-ribbon ${missionOpen ? 'is-open' : 'is-collapsed'}`}>
           <small>🎯 {t('missionTitle', lang)}</small>
           <strong>{t(MISSION_KEY[state.act], lang)}</strong>
           {state.act === 1 && (
             <span className="mission-progress">{state.actProgress}/3 {t('coveredStreakLabel', lang)}</span>
           )}
+          <button
+            className="mission-toggle"
+            type="button"
+            aria-expanded={missionOpen}
+            aria-label={t(missionOpen ? 'missionCollapse' : 'missionExpand', lang)}
+            title={t(missionOpen ? 'missionCollapse' : 'missionExpand', lang)}
+            onClick={() => setMissionOpen((o) => !o)}
+          >
+            <Icon name="chevron" size={15} />
+          </button>
         </div>
         <div className="hud-controls">
           <span className="season-badge">{SEASON_ICON[season]} {t(SEASON_KEY[season], lang)} · {state.turn}</span>
+          <button
+            className="icon-control hud-eye"
+            type="button"
+            aria-pressed={cinematic}
+            title={t(cinematic ? 'cinematicExit' : 'cinematicEnter', lang)}
+            aria-label={t(cinematic ? 'cinematicExit' : 'cinematicEnter', lang)}
+            onClick={() => setCinematic(!cinematic)}
+          >
+            <Icon name={cinematic ? 'eyeOff' : 'eye'} size={16} />
+          </button>
           <button
             className="icon-control"
             title={t('soundLabel', lang)}
